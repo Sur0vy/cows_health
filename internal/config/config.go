@@ -4,22 +4,16 @@ import (
 	"flag"
 	"fmt"
 	"os"
-
-	"github.com/caarlos0/env/v6"
 )
 
 type Config struct {
 	ServerHostPort string `env:"SM_SERVER_HOST_PORT"`
-	FrontDir       string `env:"SM_FRONT_DIR"`
 	DSN            string `env:"SM_DATA_SOURCE_NAME"`
-	//CurrentUser     string
-	//CurrentUserHash string
 }
 
 func newConfig() *Config {
 	return &Config{
 		ServerHostPort: ServerHostPort,
-		FrontDir:       FrontendDir,
 		DSN:            DataSourceName,
 	}
 }
@@ -47,7 +41,6 @@ func (c *Config) flagParams() {
 	var port string
 	flag.StringVar(&port, "p", c.ServerHostPort, "host to listen on")
 	c.ServerHostPort = ":" + port
-	flag.StringVar(&c.FrontDir, "f", c.FrontDir, "frontend setup directory")
 	flag.StringVar(&c.DSN, "d", c.DSN, "data storage name")
 	flag.Parse()
 }
