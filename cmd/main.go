@@ -1,7 +1,10 @@
 package main
 
 import (
+	"cmd/main.go/internal/server"
 	"context"
+
+	"github.com/Sur0vy/cows_health.git/internal/config"
 )
 
 func main() {
