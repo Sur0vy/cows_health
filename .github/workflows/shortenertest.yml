@@ -1,0 +1,154 @@
+name: autotests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  shortenertest:
+    runs-on: ubuntu-latest
+    container: golang:1.18
+
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: praktikum
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Download autotests binaries
+        uses: robinraju/release-downloader@v1.2
+        with:
+          repository: Yandex-Practicum/go-autotests-bin
+          latest: true
+          fileName: "*"
+          out-file-path: .tools
+
+      - name: Setup autotest binary
+        run: |
+          chmod -R +x $GITHUB_WORKSPACE/.tools
+          mv $GITHUB_WORKSPACE/.tools/shortenertest /usr/local/bin/shortenertest
+          mv $GITHUB_WORKSPACE/.tools/random /usr/local/bin/random
+
+      - name: Build server binary
+        run: |
+          cd cmd/shortener
+          go build -o shortener
+
+      - name: "Code increment #1"
+        if: always()
+        run: |
+          shortenertest -test.v -test.run=^TestIteration1$ \
+              -binary-path=cmd/shortener/shortener
+
+      - name: "Code increment #2"
+        if: always()
+        run: |
+          shortenertest -test.v -test.run=^TestIteration2$ -source-path=.
+
+      - name: "Code increment #3"
+        if: always()
+        run: |
+          shortenertest -test.v -test.run=^TestIteration3$ -source-path=.
+
+      - name: "Code increment #4"
+        if: always()
+        run: |
+          shortenertest -test.v -test.run=^TestIteration4$ \
+              -source-path=. \
+              -binary-path=cmd/shortener/shortener
+
+      - name: "Code increment #5"
+        if: always()
+        run: |
+          SERVER_HOST=$(random domain)
+          SERVER_PORT=$(random unused-port)
+          shortenertest -test.v -test.run=^TestIteration5$ \
+              -binary-path=cmd/shortener/shortener \
+              -server-host=$SERVER_HOST \
+              -server-port=$SERVER_PORT \
+              -server-base-url="http://$SERVER_HOST:$SERVER_PORT"
+
+      - name: "Code increment #6"
+        if: always()
+        run: |
+          SERVER_PORT=$(random unused-port)
+          TEMP_FILE=$(random tempfile)
+          shortenertest -test.v -test.run=^TestIteration6$ \
+              -binary-path=cmd/shortener/shortener \
+              -server-port=$SERVER_PORT \
+              -file-storage-path=$TEMP_FILE \
+              -source-path=.
+
+      - name: "Code increment #7"
+        if: always()
+        run: |
+          SERVER_PORT=$(random unused-port)
+          TEMP_FILE=$(random tempfile)
+          shortenertest -test.v -test.run=^TestIteration7$ \
+              -binary-path=cmd/shortener/shortener \
+              -server-port=$SERVER_PORT \
+              -file-storage-path=$TEMP_FILE \
+              -source-path=.
+
+      - name: "Code increment #8"
+        if: always()
+        run: |
+          shortenertest -test.v -test.run=^TestIteration8$ \
+              -source-path=. \
+              -binary-path=cmd/shortener/shortener
+
+      - name: "Code increment #9"
+        if: always()
+        run: |
+          shortenertest -test.v -test.run=^TestIteration9$ \
+              -source-path=. \
+              -binary-path=cmd/shortener/shortener
+
+      - name: "Code increment #10"
+        if: always()
+        run: |
+          shortenertest -test.v -test.run=^TestIteration10$ \
+              -source-path=. \
+              -binary-path=cmd/shortener/shortener \
+              -database-dsn='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable'
+
+      - name: "Code increment #11"
+        if: always()
+        run: |
+          shortenertest -test.v -test.run=^TestIteration11$ \
+              -binary-path=cmd/shortener/shortener \
+              -database-dsn='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable'
+
+      - name: "Code increment #12"
+        if: always()
+        run: |
+          shortenertest -test.v -test.run=^TestIteration12$ \
+              -binary-path=cmd/shortener/shortener \
+              -database-dsn='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable'
+
+      - name: "Code increment #13"
+        if: always()
+        run: |
+          shortenertest -test.v -test.run=^TestIteration13$ \
+              -binary-path=cmd/shortener/shortener \
+              -database-dsn='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable'
+
+      - name: "Code increment #14"
+        if: always()
+        run: |
+          shortenertest -test.v -test.run=^TestIteration14$ \
+              -binary-path=cmd/shortener/shortener \
+              -database-dsn='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable'
