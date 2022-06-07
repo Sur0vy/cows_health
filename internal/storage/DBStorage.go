@@ -57,10 +57,6 @@ func (s *DBStorage) GetCows(_ context.Context, farmID int) (string, error) {
 	return "", nil
 }
 
-func (s *DBStorage) GetBoluses(_ context.Context, farmId int) (string, error) {
-	return "", nil
-}
-
 func (s *DBStorage) AddUser(c context.Context, user User) (string, error) {
 	return "", nil
 }
@@ -77,16 +73,8 @@ func (s *DBStorage) GetBolusesTypes(ctx context.Context) (string, error) {
 	return "", nil
 }
 
-func (s *DBStorage) AddBolus(ctx context.Context, bolus Bolus) error {
-	return nil
-}
-
 func (s *DBStorage) GetCowInfo(ctx context.Context, cowID int) (string, error) {
 	return "", nil
-}
-
-func (s *DBStorage) DeleteBoluses(ctx context.Context, IDs []int) error {
-	return nil
 }
 
 func (s *DBStorage) GetCowBreeds(ctx context.Context) (string, error) {

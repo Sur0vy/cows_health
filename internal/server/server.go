@@ -1,8 +1,6 @@
 package server
 
 import (
-	"net/http"
-
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 
@@ -17,11 +15,6 @@ func SetupServer(s *storage.Storage) *gin.Engine {
 	router := gin.Default()
 
 	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithDecompressFn(gzip.DefaultDecompressHandle)))
-
-	// Basic route
-	router.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusAccepted, "index.html", nil)
-	})
 
 	api := router.Group("/api")
 
@@ -41,9 +34,6 @@ func SetupServer(s *storage.Storage) *gin.Engine {
 	boluses := api.Group("/boluses")
 	boluses.Use(CookieMidlewared(s))
 	boluses.GET("/types", handler.GetBolusesTypes)
-	boluses.GET("/:id", handler.GetBoluses)
-	boluses.POST("/new", handler.AddBolus)
-	boluses.DELETE("", handler.DelBoluses)
 	boluses.POST("/data", handler.AddBolusData)
 
 	cows := api.Group("/cows")
