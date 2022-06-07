@@ -23,10 +23,7 @@ type Storage interface {
 	DeleteCows(ctx context.Context, IDs []int) error
 	AddCow(ctx context.Context, cow Cow) error
 
-	GetBoluses(ctx context.Context, farmID int) (string, error)
-	AddBolus(ctx context.Context, bolus Bolus) error
 	GetBolusesTypes(ctx context.Context) (string, error)
-	DeleteBoluses(ctx context.Context, IDs []int) error
 	AddMonitoringData(ctx context.Context, data MonitoringData) error
 }
 

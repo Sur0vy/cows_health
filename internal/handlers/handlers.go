@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/Sur0vy/cows_health.git/internal/config"
+	"github.com/Sur0vy/cows_health.git/internal/logger"
 	"github.com/Sur0vy/cows_health.git/internal/storage"
 )
 
@@ -24,16 +25,13 @@ type Handle interface {
 	GetFarmInfo(c *gin.Context)
 	GetCows(c *gin.Context)
 	DelCows(c *gin.Context)
+	AddCow(c *gin.Context)
 
-	GetBoluses(c *gin.Context)
 	GetBolusesTypes(c *gin.Context)
-	AddBolus(c *gin.Context)
-	DelBoluses(c *gin.Context)
 	AddBolusData(c *gin.Context)
 
 	GetCowInfo(c *gin.Context)
 	GetCowBreeds(c *gin.Context)
-	AddCow(c *gin.Context)
 
 	ResponseBadRequest(c *gin.Context)
 }
@@ -49,13 +47,15 @@ func NewBaseHandler(s *storage.Storage) Handle {
 }
 
 func (h *BaseHandler) Login(c *gin.Context) {
+	logger.Wr.Info().Msgf("Handler IN: %v", c)
+	defer logger.Wr.Info().Msgf("Handler OUT: %v", c)
 	c.Writer.Header().Set("Content-Type", "application/json")
 	body, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
 		c.Writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	fmt.Println(string(body))
+	logger.Wr.Info().Msg(string(body))
 	var user storage.User
 	err = json.Unmarshal(body, &user)
 	if err != nil {
@@ -66,25 +66,29 @@ func (h *BaseHandler) Login(c *gin.Context) {
 	var cookie string
 	cookie, err = h.storage.CheckUser(c, user)
 	if err != nil {
+		var code int
 		switch err.(type) {
 		case *storage.ExistError:
-			c.Writer.WriteHeader(http.StatusUnauthorized)
+			code = http.StatusUnauthorized
 			return
 		default:
-			c.Writer.WriteHeader(http.StatusInternalServerError)
+			code = http.StatusInternalServerError
 			return
 		}
+		c.Writer.WriteHeader(code)
+		logger.Wr.Warn().Msgf("Erro with code: %v", code)
 	}
 
 	c.SetCookie(config.Cookie, cookie, 36000, "/", "", false, false)
 	c.Writer.WriteHeader(http.StatusOK)
-	fmt.Println(c.Cookie(config.Cookie))
+	logger.Wr.Info().Msgf("login success (cookie: %v)", cookie)
 }
 
 func (h *BaseHandler) Logout(c *gin.Context) {
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.SetCookie(config.Cookie, "", 0, "/", "", false, false)
 	c.Writer.WriteHeader(http.StatusOK)
+	logger.Wr.Info().Msg("logout success")
 }
 
 func (h *BaseHandler) Register(c *gin.Context) {
@@ -247,27 +251,6 @@ func (h *BaseHandler) DelCows(c *gin.Context) {
 	c.String(http.StatusAccepted, "")
 }
 
-func (h *BaseHandler) GetBoluses(c *gin.Context) {
-	c.Writer.Header().Set("Content-Type", "application/json")
-	farmIdStr := c.Param("id")
-	fmt.Printf("farm id = %s\n", farmIdStr)
-	farmId, err := strconv.Atoi(farmIdStr)
-	if err != nil {
-		fmt.Printf("\tError: no boluses")
-		c.Writer.WriteHeader(http.StatusNoContent)
-		return
-	}
-	var boluses string
-	boluses, err = h.storage.GetBoluses(c, farmId)
-	if err != nil {
-		fmt.Printf("\tError: no cows")
-		c.Writer.WriteHeader(http.StatusNoContent)
-		return
-	} else {
-		c.String(http.StatusOK, boluses)
-	}
-}
-
 func (h *BaseHandler) GetBolusesTypes(c *gin.Context) {
 	c.Writer.Header().Set("Content-Type", "application/json")
 	types, err := h.storage.GetBolusesTypes(c)
@@ -324,46 +307,6 @@ func (h *BaseHandler) AddCow(c *gin.Context) {
 
 }
 
-func (h *BaseHandler) AddBolus(c *gin.Context) {
-	input, err := ioutil.ReadAll(c.Request.Body)
-	if err != nil {
-		c.Writer.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	fmt.Println(string(input))
-	var bolus storage.Bolus
-	if err := json.Unmarshal(input, &bolus); err != nil {
-		c.Writer.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	err = h.storage.AddBolus(c, bolus)
-	if err != nil {
-		switch err.(type) {
-		case *storage.ExistError:
-			c.Writer.WriteHeader(http.StatusConflict)
-			return
-		default:
-			c.Writer.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-	}
-	c.Status(http.StatusCreated)
-}
-
-func (h *BaseHandler) DelBoluses(c *gin.Context) {
-	c.Writer.Header().Set("Content-Type", "application/json")
-	IDs, err := getIDFromJSON(c.Request.Body)
-
-	if err != nil {
-		c.String(http.StatusBadRequest, "")
-		return
-	}
-
-	h.storage.DeleteBoluses(c, IDs)
-	c.String(http.StatusAccepted, "")
-}
-
 func (h *BaseHandler) AddBolusData(c *gin.Context) {
 	input, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
@@ -393,6 +336,7 @@ func (h *BaseHandler) AddBolusData(c *gin.Context) {
 
 func (h *BaseHandler) ResponseBadRequest(c *gin.Context) {
 	c.String(http.StatusBadRequest, "")
+	logger.Wr.Info().Msgf("bar request. Error code: %v", http.StatusBadRequest)
 }
 
 func getIDFromJSON(reader io.ReadCloser) ([]int, error) {
