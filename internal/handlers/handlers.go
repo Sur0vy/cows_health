@@ -66,17 +66,16 @@ func (h *BaseHandler) Login(c *gin.Context) {
 	var cookie string
 	cookie, err = h.storage.CheckUser(c, user)
 	if err != nil {
-		var code int
 		switch err.(type) {
 		case *storage.ExistError:
-			code = http.StatusUnauthorized
+			c.Writer.WriteHeader(http.StatusUnauthorized)
+			logger.Wr.Warn().Msgf("Erro with code: %v", http.StatusUnauthorized)
 			return
 		default:
-			code = http.StatusInternalServerError
+			c.Writer.WriteHeader(http.StatusInternalServerError)
+			logger.Wr.Warn().Msgf("Erro with code: %v", http.StatusInternalServerError)
 			return
 		}
-		c.Writer.WriteHeader(code)
-		logger.Wr.Warn().Msgf("Erro with code: %v", code)
 	}
 
 	c.SetCookie(config.Cookie, cookie, 36000, "/", "", false, false)
@@ -95,12 +94,14 @@ func (h *BaseHandler) Register(c *gin.Context) {
 	c.Writer.Header().Set("Content-Type", "application/json")
 	body, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
+		logger.Wr.Warn().Msgf("Register failed. Bad request.")
 		c.Writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	var user storage.User
 	err = json.Unmarshal(body, &user)
 	if err != nil {
+		logger.Wr.Warn().Msgf("Register failed. Bad request.")
 		c.Writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -110,9 +111,11 @@ func (h *BaseHandler) Register(c *gin.Context) {
 		switch err.(type) {
 		case *storage.ExistError:
 			c.Writer.WriteHeader(http.StatusConflict)
+			logger.Wr.Warn().Msgf("Erro with code: %v", http.StatusConflict)
 			return
 		default:
 			c.Writer.WriteHeader(http.StatusInternalServerError)
+			logger.Wr.Warn().Msgf("Erro with code: %v", http.StatusInternalServerError)
 			return
 		}
 	}

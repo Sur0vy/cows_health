@@ -12,3 +12,7 @@
 - **SM_DATA_SOURCE_NAME** [строка подключения к БД]
 - **IS_DEBUG** [логгирование с уровнем debug]
 - **LOG_FILE** [файл логов]
+
+## FAQ  
+### Для запуска postgres
+в консоли: pg_ctl -D/usr/local/var/postgres start

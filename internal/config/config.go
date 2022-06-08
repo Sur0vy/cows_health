@@ -40,9 +40,9 @@ func Setup(opts ...option) *Config {
 func (c *Config) flagParams() {
 	var port string
 	flag.StringVar(&port, "p", c.ServerHostPort, "host to listen on")
-	c.ServerHostPort = ":" + port
 	flag.StringVar(&c.DSN, "d", c.DSN, "data storage name")
 	flag.BoolVar(&c.IsDebug, "deb", c.IsDebug, "debug logging mode")
 	flag.StringVar(&c.LogFile, "lg", "", "log file")
 	flag.Parse()
+	c.ServerHostPort = ":" + port
 }
