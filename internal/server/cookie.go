@@ -16,8 +16,8 @@ func CookieMidlewared(s *storage.Storage) gin.HandlerFunc {
 		cookie, err := c.Cookie(config.Cookie)
 		logger.Wr.Info().Msgf("Extract cookie: %v", cookie)
 		if err == nil && cookie != "" {
-			_, err := (*s).GetUser(context.Background(), cookie)
-			if err == nil {
+			u := (*s).GetUser(context.Background(), cookie)
+			if u != nil {
 				logger.Wr.Info().Msg("Cookie accepted")
 				return
 			}
