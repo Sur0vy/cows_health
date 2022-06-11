@@ -26,13 +26,15 @@ type Handle interface {
 	//GetFarmInfo(c *gin.Context)
 	//GetCows(c *gin.Context)
 
-	//AddCow(c *gin.Context)
-	//
 	//GetBolusesTypes(c *gin.Context)
-	//AddBolusData(c *gin.Context)
-	//
-	//GetCowInfo(c *gin.Context)
+
 	//GetCowBreeds(c *gin.Context)
+
+	//AddCow(c *gin.Context)
+	//DelCow(c *gin.Context)
+	//GetCowInfo(c *gin.Context)
+
+	//AddBolusData(c *gin.Context)
 
 	ResponseBadRequest(c *gin.Context)
 }
