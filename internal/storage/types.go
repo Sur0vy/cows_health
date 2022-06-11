@@ -6,14 +6,13 @@ type User struct {
 	Password string `json:"password"`
 }
 
-//
-//type Farm struct {
-//	ID      int    `json:"id"`
-//	Name    string `json:"name"`
-//	Address string `json:"address"`
-//	UserID  int    `json:"-"`
-//}
-//
+type Farm struct {
+	ID      int    `json:"farm_id"`
+	Name    string `json:"name"`
+	Address string `json:"address"`
+	UserID  int    `json:"-"`
+}
+
 //type CowBreed struct {
 //	ID    int    `json:"breed_id"`
 //	Breed string `json:"breed"`

@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -82,36 +83,107 @@ func (s *DBStorage) GetUserHash(c context.Context, user User) (string, error) {
 	return "", NewEmptyError(fmt.Sprintf("password wrong for user %s", user.Login))
 }
 
-//
-//func (s *DBStorage) GetFarms(_ context.Context, userID int) (string, error) {
-//	if userID == 1 {
-//		var farmsList []Farm
-//		for i := 1; i < 10; i++ {
-//			farm := &Farm{
-//				ID:      i,
-//				Name:    fmt.Sprintf("Ферма №: %d", i),
-//				Address: fmt.Sprintf("Адрес фермы №: %d", i),
-//			}
-//			farmsList = append(farmsList, *farm)
-//		}
-//		if len(farmsList) == 0 {
-//			return "", errors.New("no farms found")
-//		}
-//		data, err := json.Marshal(&farmsList)
-//		if err != nil {
-//			return "", err
-//		}
-//		return string(data), nil
-//
-//	} else {
-//		return "", fmt.Errorf("no farms for user")
-//	}
-//}
-//
-//func (s *DBStorage) AddFarm(ctx context.Context, farm Farm) error {
-//	return nil
-//}
-//
+func (s *DBStorage) GetFarms(c context.Context, userID int) (string, error) {
+	ctxIn, cancel := context.WithTimeout(c, 5*time.Second)
+	defer cancel()
+
+	var farms []Farm
+	sqlStr := fmt.Sprintf("SELECT %s, %s, %s FROM %s WHERE %s = $1 AND NOT %s",
+		FFarmID, FName, FAddress, TFarm, FUserID, FDeleted)
+	rows, err := s.db.QueryContext(ctxIn, sqlStr, userID)
+
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("db request error")
+		return "", err
+	}
+
+	defer func() {
+		_ = rows.Close()
+	}()
+
+	// пробегаем по всем записям
+	for rows.Next() {
+		var farm Farm
+		err = rows.Scan(&farm.ID, &farm.Name, &farm.Address)
+		if err != nil {
+			logger.Wr.Warn().Err(err).Msg("get farm instance error")
+			return "", err
+		}
+		farms = append(farms, farm)
+	}
+
+	if err := rows.Err(); err != nil {
+		logger.Wr.Warn().Err(err).Msg("get farm rows error")
+		return "", err
+	}
+
+	if len(farms) == 0 {
+		return "", NewEmptyError("no farm for current user")
+	}
+	data, err := json.Marshal(&farms)
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("marshal to json error")
+		return "", err
+	}
+	return string(data), nil
+}
+
+func (s *DBStorage) AddFarm(c context.Context, farm Farm) error {
+	ctxIn, cancel := context.WithTimeout(c, 2*time.Second)
+	defer cancel()
+
+	var userID int
+	sqlStr := fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1",
+		FFarmID, TFarm, FAddress)
+	row := s.db.QueryRowContext(ctxIn, sqlStr, farm.Address)
+	err := row.Scan(&userID)
+
+	if err == nil {
+		logger.Wr.Info().Msg("farm already exist")
+		return NewExistError("farm already exist")
+	} else if err != sql.ErrNoRows {
+		logger.Wr.Warn().Err(err).Msg("db request error")
+		return err
+	}
+
+	//добавление
+	sqlStr = fmt.Sprintf("INSERT INTO %s (%s, %s, %s) VALUES ($1, $2, $3)",
+		TFarm, FName, FAddress, FUserID)
+	_, err = s.db.ExecContext(ctxIn, sqlStr, farm.Name, farm.Address, farm.UserID)
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("inserting farm error")
+		return err
+	}
+	return nil
+}
+
+func (s *DBStorage) DelFarm(c context.Context, farmID int) error {
+	ctxIn, cancel := context.WithTimeout(c, time.Second)
+	defer cancel()
+
+	sqlStr := fmt.Sprintf("UPDATE %s SET %s = TRUE "+
+		" WHERE %s = $1 AND %s = FALSE",
+		TFarm, FDeleted, FFarmID, FDeleted)
+
+	res, err := s.db.ExecContext(ctxIn, sqlStr, farmID)
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("db request error")
+		return err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("db request error")
+		return err
+	}
+	if count == 0 {
+		logger.Wr.Info().Msgf("no farm with index %s", farmID)
+		return NewEmptyError("no farm for current user")
+	}
+
+	//TODO нужно обновлять таблицу коров, здоровья
+	return nil
+}
+
 //func (s *DBStorage) GetFarmInfo(ctx context.Context, farmID int) (string, error) {
 //	return "", nil
 //}
@@ -156,11 +228,22 @@ func (s *DBStorage) CreateTables(ctx context.Context) {
 	ctxIn, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
+	// types
+	sqlStr := fmt.Sprint("DO $$ BEGIN " +
+		"IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'bolus_type') " +
+		"THEN CREATE TYPE bolus_type AS ENUM ('С датчиком PH', 'Без датчика PH'); " +
+		"END IF; END$$")
+	_, err := s.db.ExecContext(ctxIn, sqlStr)
+	if err != nil {
+		logger.Wr.Panic().Err(err).Msg("Fail then creating type bolus_type")
+	}
+	logger.Wr.Info().Msg("Type created: bolus_type")
+
 	//1. user table
-	sqlStr := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s "+
+	sqlStr = fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s "+
 		"(%s serial UNIQUE PRIMARY KEY, %s TEXT UNIQUE NOT NULL, %s TEXT NOT NULL)",
 		TUser, FUserID, FLogin, FPassword)
-	_, err := s.db.ExecContext(ctxIn, sqlStr)
+	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
 		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TUser)
 	}
@@ -179,8 +262,9 @@ func (s *DBStorage) CreateTables(ctx context.Context) {
 	//3. farm table
 	sqlStr = fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s "+
 		"(%s serial UNIQUE PRIMARY KEY, %s TEXT NOT NULL, "+
-		"%s TEXT UNIQUE NOT NULL, %s INTEGER NOT NULL)",
-		TFarm, FFarmID, FName, FAddress, FUserID)
+		"%s TEXT UNIQUE NOT NULL, %s INTEGER NOT NULL, "+
+		"%s BOOLEAN NOT NULL DEFAULT FALSE)",
+		TFarm, FFarmID, FName, FAddress, FUserID, FDeleted)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
 		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TFarm)
@@ -190,8 +274,9 @@ func (s *DBStorage) CreateTables(ctx context.Context) {
 	//4. health table
 	sqlStr = fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s "+
 		"(%s INTEGER UNIQUE PRIMARY KEY, %s TEXT, "+
-		"%s TEXT, %s TEXT, %s TIMESTAMP)",
-		THealth, FCowID, FDrink, FStress, FIll, FUpdatedAt)
+		"%s TEXT, %s TEXT, %s TIMESTAMP, "+
+		"%s BOOLEAN NOT NULL DEFAULT FALSE)",
+		THealth, FCowID, FDrink, FStress, FIll, FUpdatedAt, FDeleted)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
 		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", THealth)
@@ -210,14 +295,13 @@ func (s *DBStorage) CreateTables(ctx context.Context) {
 	logger.Wr.Info().Msgf("Table created: %s", TMonitoringData)
 
 	//6. cow table (проверить, есть ли тип такой)
-	sqlStr = fmt.Sprintf("DROP TYPE IF EXISTS bolus_type; "+
-		"CREATE TYPE bolus_type AS ENUM ('С датчиком PH', 'Без датчика PH'); "+
-		"CREATE TABLE IF NOT EXISTS %s "+
+	sqlStr = fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s "+
 		"(%s serial UNIQUE PRIMARY KEY, %s TEXT NOT NULL, "+
 		"%s INTEGER NOT NULL, %s INTEGER NOT NULL, "+
 		"%s INTEGER UNIQUE NOT NULL, %s DATE NOT NULL, "+
-		"%s TIMESTAMP NOT NULL, %s bolus_type NOT NULL)",
-		TCow, FCowID, FName, FBreedID, FFarmID, FBolus, FDateOfBorn, FAddedAt, FBolusType)
+		"%s TIMESTAMP NOT NULL, %s bolus_type NOT NULL, "+
+		"%s BOOLEAN NOT NULL DEFAULT FALSE)",
+		TCow, FCowID, FName, FBreedID, FFarmID, FBolus, FDateOfBorn, FAddedAt, FBolusType, FDeleted)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
 		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TCow)

@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 
 	"github.com/Sur0vy/cows_health.git/internal/config"
 	"github.com/Sur0vy/cows_health.git/internal/logger"
@@ -18,11 +19,13 @@ type Handle interface {
 	Logout(c *gin.Context)
 	Register(c *gin.Context)
 
-	//GetFarms(c *gin.Context)
-	//AddFarm(c *gin.Context)
+	GetFarms(c *gin.Context)
+	AddFarm(c *gin.Context)
+	DelFarm(c *gin.Context)
+
 	//GetFarmInfo(c *gin.Context)
 	//GetCows(c *gin.Context)
-	//DelCows(c *gin.Context)
+
 	//AddCow(c *gin.Context)
 	//
 	//GetBolusesTypes(c *gin.Context)
@@ -50,15 +53,15 @@ func (h *BaseHandler) Login(c *gin.Context) {
 	c.Writer.Header().Set("Content-Type", "application/json")
 	body, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
-		c.Writer.WriteHeader(http.StatusBadRequest)
-		return
+		logger.Wr.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
+		c.AbortWithStatus(http.StatusBadRequest)
 	}
 	logger.Wr.Info().Msg(string(body))
 	var user storage.User
 	err = json.Unmarshal(body, &user)
 	if err != nil {
-		c.Writer.WriteHeader(http.StatusBadRequest)
-		return
+		logger.Wr.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
+		c.AbortWithStatus(http.StatusBadRequest)
 	}
 
 	var cookie string
@@ -121,50 +124,83 @@ func (h *BaseHandler) Register(c *gin.Context) {
 	c.Writer.WriteHeader(http.StatusOK)
 }
 
-//
-//func (h *BaseHandler) GetFarms(c *gin.Context) {
-//	c.Writer.Header().Set("Content-Type", "application/json")
-//	cookie, _ := c.Cookie(config.Cookie)
-//	userID, _ := h.storage.GetUser(c, cookie)
-//	farms, err := h.storage.GetFarms(c, userID)
-//	if err != nil {
-//		c.AbortWithStatus(http.StatusNoContent)
-//	} else {
-//		c.String(http.StatusOK, farms)
-//	}
-//}
-//
-//func (h *BaseHandler) AddFarm(c *gin.Context) {
-//	cookie, _ := c.Cookie(config.Cookie)
-//	userID, _ := h.storage.GetUser(c, cookie)
-//
-//	input, err := ioutil.ReadAll(c.Request.Body)
-//	if err != nil {
-//		c.Writer.WriteHeader(http.StatusBadRequest)
-//		return
-//	}
-//	var farm storage.Farm
-//	if err := json.Unmarshal(input, &farm); err != nil {
-//		c.Writer.WriteHeader(http.StatusBadRequest)
-//		return
-//	}
-//
-//	//проверка наличия такой фермы
-//	farm.UserID = userID
-//	err = h.storage.AddFarm(c, farm)
-//	if err != nil {
-//		switch err.(type) {
-//		case *storage.ExistError:
-//			c.Writer.WriteHeader(http.StatusConflict)
-//			return
-//		default:
-//			c.Writer.WriteHeader(http.StatusInternalServerError)
-//			return
-//		}
-//	}
-//	c.Status(http.StatusCreated)
-//}
-//
+func (h *BaseHandler) GetFarms(c *gin.Context) {
+	c.Writer.Header().Set("Content-Type", "application/json")
+	cookie, _ := c.Cookie(config.Cookie)
+	logger.Wr.Info().Msgf("Get farms for user: %v", cookie)
+	u := h.storage.GetUser(c, cookie)
+	farms, err := h.storage.GetFarms(c, u.ID)
+
+	if err != nil {
+		switch err.(type) {
+		case *storage.EmptyError:
+			logger.Wr.Warn().Msgf("Error with code: %v", http.StatusNoContent)
+			c.AbortWithStatus(http.StatusNoContent)
+		default:
+			logger.Wr.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
+			c.AbortWithStatus(http.StatusInternalServerError)
+		}
+	}
+	logger.Wr.Info().Msg("Farms for user getting success")
+	c.String(http.StatusOK, farms)
+}
+
+func (h *BaseHandler) AddFarm(c *gin.Context) {
+	cookie, _ := c.Cookie(config.Cookie)
+	logger.Wr.Info().Msgf("Add farm for user: %v", cookie)
+	u := h.storage.GetUser(c, cookie)
+
+	input, err := ioutil.ReadAll(c.Request.Body)
+	if err != nil {
+		logger.Wr.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
+		c.AbortWithStatus(http.StatusBadRequest)
+	}
+
+	var farm storage.Farm
+	if err := json.Unmarshal(input, &farm); err != nil {
+		logger.Wr.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
+		c.AbortWithStatus(http.StatusBadRequest)
+	}
+
+	farm.UserID = u.ID
+	err = h.storage.AddFarm(c, farm)
+
+	if err != nil {
+		switch err.(type) {
+		case *storage.ExistError:
+			logger.Wr.Warn().Msgf("Error with code: %v", http.StatusConflict)
+			c.AbortWithStatus(http.StatusConflict)
+		default:
+			logger.Wr.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
+			c.AbortWithStatus(http.StatusInternalServerError)
+		}
+	}
+	logger.Wr.Info().Msg("Farms for user added success")
+	c.Status(http.StatusCreated)
+}
+
+func (h *BaseHandler) DelFarm(c *gin.Context) {
+	farmID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		logger.Wr.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
+		c.AbortWithStatus(http.StatusBadRequest)
+	}
+	logger.Wr.Info().Msgf("Delete farm with index: %v", farmID)
+	err = h.storage.DelFarm(c, farmID)
+	if err != nil {
+		switch err.(type) {
+		case *storage.EmptyError:
+			logger.Wr.Warn().Msgf("Error with code: %v", http.StatusConflict)
+			c.AbortWithStatus(http.StatusConflict)
+		default:
+			logger.Wr.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
+			c.AbortWithStatus(http.StatusInternalServerError)
+		}
+	}
+
+	c.String(http.StatusOK, "")
+}
+
 //func (h *BaseHandler) GetFarmInfo(c *gin.Context) {
 //	c.Writer.Header().Set("Content-Type", "application/json")
 //	farmIdStr := c.Param("id")
