@@ -16,6 +16,7 @@ const (
 	FUserID   string = "user_id"
 	FLogin    string = "login"
 	FPassword string = "password"
+	FDeleted  string = "deleted"
 
 	FFarmID  string = "farm_id"
 	FAddress string = "farm_address"

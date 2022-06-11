@@ -23,11 +23,12 @@ func SetupServer(s *storage.Storage) *gin.Engine {
 	user.POST("/login", handler.Login)
 	user.POST("/logout", handler.Logout)
 
-	//farms := api.Group("/farms")
-	//farms.Use(CookieMidlewared(s))
-	//farms.GET("", handler.GetFarms)
-	//farms.POST("/new", handler.AddFarm)
-	////farms.DELETE("/:id", handler.DelFarm)
+	farms := api.Group("/farms")
+	farms.Use(CookieMidlewared(s))
+	farms.GET("", handler.GetFarms)
+	farms.POST("", handler.AddFarm)
+	farms.DELETE("/:id", handler.DelFarm)
+
 	//farms.GET("/:id/info", handler.GetFarmInfo)
 	//farms.GET("/:id/cows", handler.GetCows)
 	//
@@ -36,8 +37,8 @@ func SetupServer(s *storage.Storage) *gin.Engine {
 	//boluses.GET("/types", handler.GetBolusesTypes)
 	//boluses.POST("/data", handler.AddBolusData)
 	//
-	//cows := api.Group("/cows")
-	//cows.Use(CookieMidlewared(s))
+	cows := api.Group("/cows")
+	cows.Use(CookieMidlewared(s))
 	//cows.GET("/types", handler.GetCowBreeds)
 	//cows.POST("/new", handler.AddCow)
 	//cows.DELETE("", handler.DelCows)

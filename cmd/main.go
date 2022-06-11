@@ -12,7 +12,7 @@ import (
 func main() {
 	cnf := *config.Setup(config.LoadParams())
 	logger.Wr = logger.New(cnf.IsDebug, cnf.LogFile)
-	logger.Wr.Info().Msgf("Server start: address:", cnf.ServerHostPort)
+	logger.Wr.Info().Msgf("Server start: address: %s", cnf.ServerHostPort)
 	defer logger.Wr.Info().Msg("Server stop")
 
 	logger.Wr.Info().Msgf("Load storage with parameters %s", cnf.DSN)

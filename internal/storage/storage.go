@@ -9,13 +9,14 @@ import (
 )
 
 type Storage interface {
-	AddUser(ctx context.Context, user User) (string, error)
-	GetUserHash(ctx context.Context, user User) (string, error)
-	GetUser(ctx context.Context, userHash string) *User
-	//GetUser(ctx context.Context, cookie string) (int, error)
-	//
-	//GetFarms(ctx context.Context, userID int) (string, error)
-	//AddFarm(ctx context.Context, farm Farm) error
+	AddUser(с context.Context, user User) (string, error)
+	GetUserHash(с context.Context, user User) (string, error)
+	GetUser(с context.Context, userHash string) *User
+
+	GetFarms(с context.Context, userID int) (string, error)
+	AddFarm(с context.Context, farm Farm) error
+	DelFarm(с context.Context, farmID int) error
+
 	//GetFarmInfo(ctx context.Context, farmID int) (string, error)
 	//
 	//GetCows(ctx context.Context, farmID int) (string, error)
