@@ -16,131 +16,140 @@ import (
 )
 
 func TestBaseHandler_AddFarm(t *testing.T) {
-	//type fields struct {
-	//	body []string
-	//}
-	//type args struct {
-	//	id string
-	//}
-	//type want struct {
-	//	URL  string
-	//	code int
-	//}
-	//tests := []struct {
-	//	name   string
-	//	fields fields
-	//	args   args
-	//	want   want
-	//}{
-	//	{
-	//		name: "Test GET correct",
-	//		fields: fields{
-	//			body: []string{"testURL1"},
-	//		},
-	//		args: args{
-	//			id: "testShortURL1",
-	//		},
-	//		want: want{
-	//			URL:  "testURL1",
-	//			code: http.StatusTemporaryRedirect,
-	//		},
-	//	},
-	//}
-	//
-	//for _, tt := range tests {
-	//t.Run(tt.name, func(t *testing.T) {
-	//		storage := storage.NewDBStorage(context.Background(), "")
-	//		s := server.SetupServer(storage)
-	//		w := httptest.NewRecorder()
-	//
-	//		//заполним БД
-	//		for _, v := range tt.fields.body {
-	//			body := bytes.NewBuffer([]byte(v))
-	//			req, _ := http.NewRequest("POST", "/", body)
-	//			s.ServeHTTP(w, req)
-	//		}
-	//
-	//		r := httptest.NewRecorder()
-	//
-	//		URL := "/" + tt.args.id
-	//		req, err := http.NewRequest("GET", URL, nil)
-	//		s.ServeHTTP(r, req)
-	//
-	//		assert.Nil(t, err)
-	//		assert.Equal(t, tt.want.code, r.Code)
-	//
-	//		URL = r.Header().Get("Location")
-	//		assert.Equal(t, tt.want.URL, URL)
-	//		}
-	//}
+	assert.NotNil(t, nil)
 }
 
 func TestBaseHandler_DelFarm(t *testing.T) {
-
+	assert.NotNil(t, nil)
 }
 
 func TestBaseHandler_GetFarms(t *testing.T) {
-	//ctrl := gomock.NewController(t)
-	//defer ctrl.Finish()
-	//
-	//s := mocks.NewMockStorage(ctrl)
-	//
-	//value := []byte("Some value")
-	//
-	//// при вызове с произвольным аргументом
-	//// заглушка будет возвращать слайс
-	//// метод может быть вызван не более 5 раз
-	//s.EXPECT().
-	//	GetFarms("1").
-	//	Return(value, nil).
-	//	MaxTimes(5)
-	//
-	//// тестируем функцию
-	//Lookup(s, someCond)
+	assert.NotNil(t, nil)
 }
 
 func TestBaseHandler_Login(t *testing.T) {
-	//ctrl := gomock.NewController(t)
-	//defer ctrl.Finish()
-	//
-	//storage := mocks.NewMockStorage(ctrl)
-	//
-	//s := server.SetupServer(storage)
-	//w := httptest.NewRecorder()
+	type want struct {
+		cookie string
+		code   int
+		err    error
+	}
+	testData := []struct {
+		body string
+	}{
+		{
+			body: "{\"login\": \"User\", \"password\": \"pa$$word_1\"}",
+		},
+	}
+	tests := []struct {
+		name string
+		args string
+		want want
+	}{
+		{
+			name: "New user",
+			args: "{\"login\": \"User\", \"password\": \"pa$$word_1\"}",
+			want: want{
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+				code:   http.StatusOK,
+				err:    nil,
+			},
+		},
+		{
+			name: "Bad body",
+			args: "word\": \"pa$$1\"}",
+			want: want{
+				cookie: "",
+				code:   http.StatusBadRequest,
+				err:    nil,
+			},
+		},
+		{
+			name: "Wrong user name",
+			args: "{\"login\": \"User2\", \"password\": \"pa$$word_1\"}",
+			want: want{
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+				code:   http.StatusUnauthorized,
+				err:    nil,
+			},
+		},
+		{
+			name: "Wrong password",
+			args: "{\"login\": \"User\", \"password\": \"ewrwerwer\"}",
+			want: want{
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+				code:   http.StatusUnauthorized,
+				err:    nil,
+			},
+		},
+	}
+	logger.Wr = logger.New()
+	ds := storage.NewDBMockStorage(context.Background())
+	handler := NewBaseHandler(ds)
+	gin.SetMode(gin.ReleaseMode)
+	router := gin.Default()
+	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithDecompressFn(gzip.DefaultDecompressHandle)))
+	router.POST("/api/user/login", handler.Login)
+	router.NoRoute(handler.ResponseBadRequest)
+	w := httptest.NewRecorder()
 
-	//body := bytes.NewBuffer([]byte(tt.args.body))
-	//req, err := http.NewRequest("POST", "/", body)
-	//
-	//s.ServeHTTP(w, req)
-	//
-	//assert.Nil(t, err)
-	//
-	//assert.Equal(t, w.Code, tt.want.code)
-	//
-	//if tt.args.trueVal {
-	//	body = bytes.NewBuffer([]byte(config.HTTP + config.Cnf.BaseURL + "/" + tt.want.body))
-	//	assert.Equal(t, fmt.Sprint(body), fmt.Sprint(w.Body))
-	//} else {
-	//	body = bytes.NewBuffer([]byte(config.Cnf.BaseURL + tt.want.body))
-	//	assert.NotEqual(t, fmt.Sprint(w.Body), fmt.Sprint(body))
-	//}
+	router.POST("/api/user/register", handler.Register)
+	for _, tt := range testData {
+		body := bytes.NewBuffer([]byte(tt.body))
+		req, _ := http.NewRequest("POST", "/api/user/register", body)
+		router.ServeHTTP(w, req)
+	}
 
-	//value := []byte("Some value")
-
-	// при вызове с произвольным аргументом
-	// заглушка будет возвращать слайс
-	// метод может быть вызван не более 5 раз
-	//storage.EXPECT().
-	//	Login("1").
-	//	Return(value, nil).
-	//	MaxTimes(5)
-
-	// тестируем функцию
-	//Lookup(s, someCond)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			body := bytes.NewBuffer([]byte(tt.args))
+			req, err := http.NewRequest("POST", "/api/user/login", body)
+			router.ServeHTTP(w, req)
+			assert.Nil(t, err)
+			assert.Equal(t, tt.want.code, w.Code)
+		})
+	}
 }
 
 func TestBaseHandler_Logout(t *testing.T) {
+	type want struct {
+		cookie string
+		code   int
+		err    error
+	}
+	tests := []struct {
+		name string
+		want want
+	}{
+		{
+			name: "New user",
+			want: want{
+				cookie: "",
+				code:   http.StatusOK,
+				err:    nil,
+			},
+		},
+	}
+	logger.Wr = logger.New()
+	ds := storage.NewDBMockStorage(context.Background())
+	handler := NewBaseHandler(ds)
+	gin.SetMode(gin.ReleaseMode)
+	router := gin.Default()
+	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithDecompressFn(gzip.DefaultDecompressHandle)))
+	router.POST("/api/user/logout", handler.Logout)
+	router.NoRoute(handler.ResponseBadRequest)
 
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			//req, err := http.NewRequest("POST", "/api/user/logout", bytes.NewBuffer([]byte("")))
+			req, err := http.NewRequest("POST", "/api/user/logout", nil)
+			router.ServeHTTP(w, req)
+			assert.Nil(t, err)
+			assert.Equal(t, tt.want.code, w.Code)
+			assert.Equal(t, tt.want.cookie, w.Result().Cookies()[0].Value)
+		})
+	}
 }
 
 func TestBaseHandler_Register(t *testing.T) {
@@ -197,9 +206,7 @@ func TestBaseHandler_Register(t *testing.T) {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithDecompressFn(gzip.DefaultDecompressHandle)))
-	api := router.Group("/api")
-	user := api.Group("/user")
-	user.POST("/register", handler.Register)
+	router.POST("/api/user/register", handler.Register)
 	router.NoRoute(handler.ResponseBadRequest)
 
 	for _, tt := range tests {
@@ -210,18 +217,19 @@ func TestBaseHandler_Register(t *testing.T) {
 			router.ServeHTTP(w, req)
 			assert.Nil(t, err)
 			assert.Equal(t, tt.want.code, w.Code)
+			assert.Equal(t, tt.want.cookie, w.Result().Cookies()[0].Value)
 		})
 	}
 }
 
 func TestBaseHandler_ResponseBadRequest(t *testing.T) {
-
+	assert.NotNil(t, nil)
 }
 
 func TestNewBaseHandler(t *testing.T) {
-
+	assert.NotNil(t, nil)
 }
 
 func Test_getIDFromJSON(t *testing.T) {
-
+	assert.NotNil(t, nil)
 }
