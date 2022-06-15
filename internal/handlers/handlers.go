@@ -58,6 +58,7 @@ func (h *BaseHandler) Login(c *gin.Context) {
 	if err != nil {
 		logger.Wr.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
 		c.AbortWithStatus(http.StatusBadRequest)
+		return
 	}
 	logger.Wr.Info().Msg(string(body))
 	var user storage.User
@@ -65,6 +66,7 @@ func (h *BaseHandler) Login(c *gin.Context) {
 	if err != nil {
 		logger.Wr.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
 		c.AbortWithStatus(http.StatusBadRequest)
+		return
 	}
 
 	var cookie string
@@ -139,9 +141,11 @@ func (h *BaseHandler) GetFarms(c *gin.Context) {
 		case *storage.EmptyError:
 			logger.Wr.Warn().Msgf("Error with code: %v", http.StatusNoContent)
 			c.AbortWithStatus(http.StatusNoContent)
+			return
 		default:
 			logger.Wr.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
 			c.AbortWithStatus(http.StatusInternalServerError)
+			return
 		}
 	}
 	logger.Wr.Info().Msg("Farms for user getting success")
@@ -157,12 +161,14 @@ func (h *BaseHandler) AddFarm(c *gin.Context) {
 	if err != nil {
 		logger.Wr.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
 		c.AbortWithStatus(http.StatusBadRequest)
+		return
 	}
 
 	var farm storage.Farm
 	if err := json.Unmarshal(input, &farm); err != nil {
 		logger.Wr.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
 		c.AbortWithStatus(http.StatusBadRequest)
+		return
 	}
 
 	farm.UserID = u.ID
@@ -173,9 +179,11 @@ func (h *BaseHandler) AddFarm(c *gin.Context) {
 		case *storage.ExistError:
 			logger.Wr.Warn().Msgf("Error with code: %v", http.StatusConflict)
 			c.AbortWithStatus(http.StatusConflict)
+			return
 		default:
 			logger.Wr.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
 			c.AbortWithStatus(http.StatusInternalServerError)
+			return
 		}
 	}
 	logger.Wr.Info().Msg("Farms for user added success")
@@ -187,6 +195,7 @@ func (h *BaseHandler) DelFarm(c *gin.Context) {
 	if err != nil {
 		logger.Wr.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
 		c.AbortWithStatus(http.StatusBadRequest)
+		return
 	}
 	logger.Wr.Info().Msgf("Delete farm with index: %v", farmID)
 	err = h.storage.DelFarm(c, farmID)
@@ -195,9 +204,11 @@ func (h *BaseHandler) DelFarm(c *gin.Context) {
 		case *storage.EmptyError:
 			logger.Wr.Warn().Msgf("Error with code: %v", http.StatusConflict)
 			c.AbortWithStatus(http.StatusConflict)
+			return
 		default:
 			logger.Wr.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
 			c.AbortWithStatus(http.StatusInternalServerError)
+			return
 		}
 	}
 
