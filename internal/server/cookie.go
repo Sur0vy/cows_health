@@ -11,12 +11,12 @@ import (
 	"github.com/Sur0vy/cows_health.git/internal/storage"
 )
 
-func CookieMidlewared(s *storage.Storage) gin.HandlerFunc {
+func CookieMidlewared(s storage.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		cookie, err := c.Cookie(config.Cookie)
 		logger.Wr.Info().Msgf("Extract cookie: %v", cookie)
 		if err == nil && cookie != "" {
-			u := (*s).GetUser(context.Background(), cookie)
+			u := s.GetUser(context.Background(), cookie)
 			if u != nil {
 				logger.Wr.Info().Msg("Cookie accepted")
 				return

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v4/stdlib"
+	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/Sur0vy/cows_health.git/internal/logger"
 )
@@ -16,10 +17,10 @@ type DBStorage struct {
 	db *sql.DB
 }
 
-func NewDBStorage(ctx context.Context, DSN string) Storage {
+func NewDBStorage(ctx context.Context, DSN string) *DBStorage {
 	s := &DBStorage{}
-	s.Connect(DSN)
-	s.CreateTables(ctx)
+	s.connect(DSN)
+	s.createTables(ctx)
 	return s
 }
 
@@ -216,7 +217,7 @@ func (s *DBStorage) DelFarm(c context.Context, farmID int) error {
 //	return nil
 //}
 
-func (s *DBStorage) Connect(DSN string) {
+func (s *DBStorage) connect(DSN string) {
 	var err error
 	s.db, err = sql.Open("pgx", DSN)
 	if err != nil {
@@ -224,7 +225,7 @@ func (s *DBStorage) Connect(DSN string) {
 	}
 }
 
-func (s *DBStorage) CreateTables(ctx context.Context) {
+func (s *DBStorage) createTables(ctx context.Context) {
 	ctxIn, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 

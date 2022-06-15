@@ -3,11 +3,12 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
 
 	"github.com/Sur0vy/cows_health.git/internal/config"
 	"github.com/Sur0vy/cows_health.git/internal/logger"
@@ -43,9 +44,9 @@ type BaseHandler struct {
 	storage storage.Storage
 }
 
-func NewBaseHandler(s *storage.Storage) Handle {
+func NewBaseHandler(s storage.Storage) Handle {
 	return &BaseHandler{
-		storage: *s,
+		storage: s,
 	}
 }
 
@@ -103,7 +104,7 @@ func (h *BaseHandler) Register(c *gin.Context) {
 	}
 	var user storage.User
 	err = json.Unmarshal(body, &user)
-	if err != nil {
+	if (err != nil) || (user.Login == "") || (user.Password == "") {
 		logger.Wr.Warn().Msgf("Register failed. Bad request.")
 		c.Writer.WriteHeader(http.StatusBadRequest)
 		return

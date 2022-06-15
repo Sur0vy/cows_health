@@ -11,7 +11,7 @@ import (
 
 func main() {
 	cnf := *config.Setup(config.LoadParams())
-	logger.Wr = logger.New(cnf.IsDebug, cnf.LogFile)
+	logger.Wr = logger.New(logger.IsDebug(cnf.IsDebug), logger.LogFile(cnf.LogFile))
 	logger.Wr.Info().Msgf("Server start: address: %s", cnf.ServerHostPort)
 	defer logger.Wr.Info().Msg("Server stop")
 
@@ -19,7 +19,7 @@ func main() {
 
 	ds := storage.NewDBStorage(context.Background(), cnf.DSN)
 
-	err := server.SetupServer(&ds).Run(cnf.ServerHostPort)
+	var err = server.SetupServer(ds).Run(cnf.ServerHostPort)
 	if err == nil {
 		logger.Wr.Panic().Err(err).Msg(err.Error())
 	}

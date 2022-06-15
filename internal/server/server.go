@@ -8,7 +8,7 @@ import (
 	"github.com/Sur0vy/cows_health.git/internal/storage"
 )
 
-func SetupServer(s *storage.Storage) *gin.Engine {
+func SetupServer(s storage.Storage) *gin.Engine {
 
 	handler := handlers.NewBaseHandler(s)
 	gin.SetMode(gin.ReleaseMode)

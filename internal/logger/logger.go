@@ -2,42 +2,66 @@ package logger
 
 import (
 	"context"
+	"gopkg.in/natefinch/lumberjack.v2"
 	"io"
 	"os"
 
 	"github.com/rs/zerolog"
-	"gopkg.in/natefinch/lumberjack.v2"
 )
+
+type option func(*Logger)
+
+func IsDebug(flag bool) option {
+	return func(l *Logger) {
+		if flag {
+			l.logLevel = zerolog.DebugLevel
+		}
+	}
+}
+
+func LogFile(fileName string) option {
+	return func(l *Logger) {
+		l.logFile = fileName
+	}
+}
 
 var Wr *Logger
 
 type Logger struct {
-	logger *zerolog.Logger
+	logger   *zerolog.Logger
+	logFile  string
+	logLevel zerolog.Level
 }
 
-func New(isDebug bool, logFile string) *Logger {
-	logLevel := zerolog.InfoLevel
-	if isDebug {
-		logLevel = zerolog.DebugLevel
-	}
-
+func New(opts ...option) *Logger {
 	zerolog.MessageFieldName = "msg"
 
-	zerolog.SetGlobalLevel(logLevel)
-
 	var lg zerolog.Logger
-	if logFile != "" {
+
+	logger := &Logger{
+		logger:   &lg,
+		logFile:  "",
+		logLevel: zerolog.InfoLevel,
+	}
+	for _, opt := range opts {
+		opt(logger)
+	}
+
+	zerolog.SetGlobalLevel(logger.logLevel)
+
+	if logger.logFile != "" {
 		lg = zerolog.New(&lumberjack.Logger{
-			Filename:   logFile, // Имя файла
-			MaxSize:    20,      // Размер в МБ до ротации файла
-			MaxBackups: 5,       // Максимальное количество файлов, сохраненных до перезаписи
-			MaxAge:     30,      // Максимальное количество дней для хранения файлов
-			Compress:   true,    // Следует ли сжимать файлы логов с помощью gzip
+			Filename:   logger.logFile, // Имя файла
+			MaxSize:    20,             // Размер в МБ до ротации файла
+			MaxBackups: 5,              // Максимальное количество файлов, сохраненных до перезаписи
+			MaxAge:     30,             // Максимальное количество дней для хранения файлов
+			Compress:   true,           // Следует ли сжимать файлы логов с помощью gzip
 		}).With().Timestamp().Logger()
 	} else {
 		lg = zerolog.New(os.Stderr).With().Timestamp().Logger()
 	}
-	return &Logger{logger: &lg}
+
+	return logger
 }
 
 func NewConsole(isDebug bool) *Logger {
