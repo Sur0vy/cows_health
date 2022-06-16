@@ -156,7 +156,11 @@ func (h *BaseHandler) AddFarm(c *gin.Context) {
 	cookie, _ := c.Cookie(config.Cookie)
 	logger.Wr.Info().Msgf("Add farm for user: %v", cookie)
 	u := h.storage.GetUser(c, cookie)
-
+	if u == nil {
+		logger.Wr.Info().Msg("Bad cookie or cookie not found")
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"Message": "Unauthorized"})
+		return
+	}
 	input, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
 		logger.Wr.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
