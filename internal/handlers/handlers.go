@@ -22,17 +22,15 @@ type Handle interface {
 	AddFarm(c *gin.Context)
 	DelFarm(c *gin.Context)
 
+	GetCowBreeds(c *gin.Context)
 	//GetFarmInfo(c *gin.Context)
 	//GetCows(c *gin.Context)
 
-	//GetBolusesTypes(c *gin.Context)
-
-	//GetCowBreeds(c *gin.Context)
-
-	//AddCow(c *gin.Context)
+	AddCow(c *gin.Context)
 	//DelCow(c *gin.Context)
 	//GetCowInfo(c *gin.Context)
 
+	GetBolusesTypes(c *gin.Context)
 	//AddBolusData(c *gin.Context)
 
 	ResponseBadRequest(c *gin.Context)
@@ -317,63 +315,103 @@ func (h *BaseHandler) DelFarm(c *gin.Context) {
 //	h.storage.DeleteCows(c, IDs)
 //	c.String(http.StatusAccepted, "")
 //}
-//
-//func (h *BaseHandler) GetBolusesTypes(c *gin.Context) {
-//	c.Writer.Header().Set("Content-Type", "application/json")
-//	types, err := h.storage.GetBolusesTypes(c)
-//	if err != nil {
-//		switch err.(type) {
-//		case *storage.EmptyError:
-//			c.Writer.WriteHeader(http.StatusNoContent)
-//			return
-//		default:
-//			c.Writer.WriteHeader(http.StatusInternalServerError)
-//			return
-//		}
-//	} else {
-//		c.String(http.StatusOK, types)
-//	}
-//}
-//
-//func (h *BaseHandler) GetCowBreeds(c *gin.Context) {
-//	c.Writer.Header().Set("Content-Type", "application/json")
-//	types, err := h.storage.GetCowBreeds(c)
-//	if err != nil {
-//		switch err.(type) {
-//		case *storage.EmptyError:
-//			c.Writer.WriteHeader(http.StatusNoContent)
-//			return
-//		default:
-//			c.Writer.WriteHeader(http.StatusInternalServerError)
-//			return
-//		}
-//	} else {
-//		c.String(http.StatusOK, types)
-//	}
-//}
-//
-//func (h *BaseHandler) AddCow(c *gin.Context) {
-//	input, err := ioutil.ReadAll(c.Request.Body)
-//	if err != nil {
-//		c.Writer.WriteHeader(http.StatusBadRequest)
-//		return
-//	}
-//	fmt.Println(string(input))
-//	var cow storage.Cow
-//	if err := json.Unmarshal(input, &cow); err != nil {
-//		c.Writer.WriteHeader(http.StatusBadRequest)
-//		return
-//	}
-//
-//	err = h.storage.AddCow(c, cow)
-//	if err != nil {
-//		c.Writer.WriteHeader(http.StatusInternalServerError)
-//		return
-//	}
-//	c.Status(http.StatusCreated)
-//
-//}
-//
+
+func (h *BaseHandler) GetBolusesTypes(c *gin.Context) {
+	c.Writer.Header().Set("Content-Type", "application/json")
+	cookie, _ := c.Cookie(config.Cookie)
+	logger.Wr.Info().Msgf("Get bolus types ", cookie)
+	u := h.storage.GetUser(c, cookie)
+	if u == nil {
+		logger.Wr.Info().Msg("Bad cookie or cookie not found")
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"Message": "Unauthorized"})
+		return
+	}
+
+	types, err := h.storage.GetBolusesTypes(c)
+	if err != nil {
+		switch err.(type) {
+		case *storage.EmptyError:
+			logger.Wr.Warn().Msgf("Error with code: %v", http.StatusNoContent)
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		default:
+			logger.Wr.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+	}
+	logger.Wr.Info().Msg("boluses types getting success")
+	c.String(http.StatusOK, types)
+}
+
+func (h *BaseHandler) GetCowBreeds(c *gin.Context) {
+	c.Writer.Header().Set("Content-Type", "application/json")
+	cookie, _ := c.Cookie(config.Cookie)
+	logger.Wr.Info().Msgf("Get cows breeds", cookie)
+	u := h.storage.GetUser(c, cookie)
+	if u == nil {
+		logger.Wr.Info().Msg("Bad cookie or cookie not found")
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"Message": "Unauthorized"})
+		return
+	}
+	breeds, err := h.storage.GetCowBreeds(c)
+	if err != nil {
+		switch err.(type) {
+		case *storage.EmptyError:
+			logger.Wr.Warn().Msgf("Error with code: %v", http.StatusNoContent)
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		default:
+			logger.Wr.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+	}
+	logger.Wr.Info().Msg("Breeds getting success")
+	c.String(http.StatusOK, breeds)
+}
+
+func (h *BaseHandler) AddCow(c *gin.Context) {
+	cookie, _ := c.Cookie(config.Cookie)
+	logger.Wr.Info().Msgf("Add cow for user: %v", cookie)
+	u := h.storage.GetUser(c, cookie)
+	if u == nil {
+		logger.Wr.Info().Msg("Bad cookie or cookie not found")
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"Message": "Unauthorized"})
+		return
+	}
+	input, err := ioutil.ReadAll(c.Request.Body)
+	if err != nil {
+		logger.Wr.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	var cow storage.Cow
+	if err := json.Unmarshal(input, &cow); err != nil {
+		logger.Wr.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	err = h.storage.AddCow(c, cow)
+
+	if err != nil {
+		switch err.(type) {
+		case *storage.ExistError:
+			logger.Wr.Warn().Msgf("Error with code: %v", http.StatusConflict)
+			c.AbortWithStatus(http.StatusConflict)
+			return
+		default:
+			logger.Wr.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+	}
+	logger.Wr.Info().Msg("Cow for user added success")
+	c.Status(http.StatusCreated)
+}
+
 //func (h *BaseHandler) AddBolusData(c *gin.Context) {
 //	input, err := ioutil.ReadAll(c.Request.Body)
 //	if err != nil {

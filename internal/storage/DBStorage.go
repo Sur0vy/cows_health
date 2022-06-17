@@ -185,6 +185,51 @@ func (s *DBStorage) DelFarm(c context.Context, userID int, farmID int) error {
 	return nil
 }
 
+func (s *DBStorage) GetCowBreeds(c context.Context) (string, error) {
+	ctxIn, cancel := context.WithTimeout(c, 2*time.Second)
+	defer cancel()
+
+	var breeds []CowBreed
+	sqlStr := fmt.Sprintf("SELECT %s, %s FROM %s",
+		FBreedID, FBreed, TBreed)
+	rows, err := s.db.QueryContext(ctxIn, sqlStr)
+
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("db request error")
+		return "", err
+	}
+
+	defer func() {
+		_ = rows.Close()
+	}()
+
+	// пробегаем по всем записям
+	for rows.Next() {
+		var breed CowBreed
+		err = rows.Scan(&breed.ID, &breed.Breed)
+		if err != nil {
+			logger.Wr.Warn().Err(err).Msg("get breed instance error")
+			return "", err
+		}
+		breeds = append(breeds, breed)
+	}
+
+	if err := rows.Err(); err != nil {
+		logger.Wr.Warn().Err(err).Msg("get breed rows error")
+		return "", err
+	}
+
+	if len(breeds) == 0 {
+		return "", NewEmptyError("no farm for current user")
+	}
+	data, err := json.Marshal(&breeds)
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("marshal to json error")
+		return "", err
+	}
+	return string(data), nil
+}
+
 //func (s *DBStorage) GetFarmInfo(ctx context.Context, farmID int) (string, error) {
 //	return "", nil
 //}
@@ -193,18 +238,54 @@ func (s *DBStorage) DelFarm(c context.Context, userID int, farmID int) error {
 //	return "", nil
 //}
 
-//func (s *DBStorage) GetBolusesTypes(ctx context.Context) (string, error) {
-//	return "", nil
-//}
-//
+func (s *DBStorage) GetBolusesTypes(c context.Context) (string, error) {
+	ctxIn, cancel := context.WithTimeout(c, 5*time.Second)
+	defer cancel()
+
+	var types []string
+	sqlStr := "SELECT unnest(enum_range(NULL::bolus_type))"
+	rows, err := s.db.QueryContext(ctxIn, sqlStr)
+
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("db request error")
+		return "", err
+	}
+
+	defer func() {
+		_ = rows.Close()
+	}()
+
+	// пробегаем по всем записям
+	for rows.Next() {
+		var bolusType string
+		err = rows.Scan(&bolusType)
+		if err != nil {
+			logger.Wr.Warn().Err(err).Msg("get bolus type error")
+			return "", err
+		}
+		types = append(types, bolusType)
+	}
+
+	if err := rows.Err(); err != nil {
+		logger.Wr.Warn().Err(err).Msg("get bolus types rows error")
+		return "", err
+	}
+
+	if len(types) == 0 {
+		return "", NewEmptyError("no bolus types")
+	}
+	data, err := json.Marshal(&types)
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("marshal to json error")
+		return "", err
+	}
+	return string(data), nil
+}
+
 //func (s *DBStorage) GetCowInfo(ctx context.Context, cowID int) (string, error) {
 //	return "", nil
 //}
-//
-//func (s *DBStorage) GetCowBreeds(ctx context.Context) (string, error) {
-//	return "", nil
-//}
-//
+
 //func (s *DBStorage) AddMonitoringData(ctx context.Context, data MonitoringData) error {
 //	return nil
 //}
@@ -212,10 +293,35 @@ func (s *DBStorage) DelFarm(c context.Context, userID int, farmID int) error {
 //func (s *DBStorage) DeleteCows(ctx context.Context, IDs []int) error {
 //	return nil
 //}
-//
-//func (s *DBStorage) AddCow(ctx context.Context, cow Cow) error {
-//	return nil
-//}
+
+func (s *DBStorage) AddCow(c context.Context, cow Cow) error {
+	ctxIn, cancel := context.WithTimeout(c, 2*time.Second)
+	defer cancel()
+
+	//var userID int
+	//sqlStr := fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1",
+	///	FFarmID, TFarm, FAddress)
+	//row := s.db.QueryRowContext(ctxIn, sqlStr, farm.Address)
+	//err := row.Scan(&userID)
+	//
+	//if err == nil {
+	//	logger.Wr.Info().Msg("farm already exist")
+	//	return NewExistError("farm already exist")
+	//} else if err != sql.ErrNoRows {
+	//	logger.Wr.Warn().Err(err).Msg("db request error")
+	//	return err
+	//}
+	//
+	////добавление
+	//sqlStr = fmt.Sprintf("INSERT INTO %s (%s, %s, %s) VALUES ($1, $2, $3)",
+	//	TFarm, FName, FAddress, FUserID)
+	//_, err = s.db.ExecContext(ctxIn, sqlStr, farm.Name, farm.Address, farm.UserID)
+	//if err != nil {
+	//	logger.Wr.Warn().Err(err).Msg("inserting farm error")
+	//	return err
+	//}
+	//return nil
+}
 
 func (s *DBStorage) connect(DSN string) {
 	var err error

@@ -17,16 +17,16 @@ type Storage interface {
 	AddFarm(с context.Context, farm Farm) error
 	DelFarm(с context.Context, userID int, farmID int) error
 
-	//GetFarmInfo(ctx context.Context, farmID int) (string, error)
-	//
-	//GetCows(ctx context.Context, farmID int) (string, error)
-	//GetCowInfo(ctx context.Context, farmID int) (string, error)
-	//GetCowBreeds(ctx context.Context) (string, error)
-	//DeleteCows(ctx context.Context, IDs []int) error
-	//AddCow(ctx context.Context, cow Cow) error
-	//
-	//GetBolusesTypes(ctx context.Context) (string, error)
-	//AddMonitoringData(ctx context.Context, data MonitoringData) error
+	AddCow(c context.Context, cow Cow) error
+	//GetCows(c context.Context, farmID int) (string, error)
+	//DeleteCows(c context.Context, IDs []int) error
+
+	//GetFarmInfo(c context.Context, farmID int) (string, error)
+	//GetCowInfo(c context.Context, farmID int) (string, error)
+
+	GetCowBreeds(c context.Context) (string, error)
+	GetBolusesTypes(c context.Context) (string, error)
+	//AddMonitoringData(c context.Context, data MonitoringData) error
 }
 
 func getMD5Hash(text string) string {

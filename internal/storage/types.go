@@ -1,5 +1,7 @@
 package storage
 
+import "time"
+
 type User struct {
 	ID       int    `json:"-"`
 	Login    string `json:"login"`
@@ -13,39 +15,22 @@ type Farm struct {
 	UserID  int    `json:"-"`
 }
 
-//type CowBreed struct {
-//	ID    int    `json:"breed_id"`
-//	Breed string `json:"breed"`
-//}
-//
-//type Cow struct {
-//	ID              int    `json:"id,omitempty"`
-//	Name            string `json:"name"`
-//	BolusNum        string `json:"bolusNum"`
-//	LactationDay    int    `json:"lactationDay"`
-//	Breed           string `json:"type"`
-//	BreedID         int    `json:"typeID,omitempty"`
-//	DateOfBorn      string `json:"dateOfBorn"`
-//	BolusID         int    `json:"bolusID"`
-//	Age             int    `json:"age,omitempty"`
-//	FarmID          int    `json:"farmID"`
-//	Farm            string `json:"farm,omitempty"`
-//	Calf            bool   `json:"calf,omitempty"`            //*bool
-//	InseminationDay int    `json:"inseminationDay,omitempty"` //*int
-//}
-//
-//type Bolus struct {
-//	ID           int    `json:"id"`
-//	SerialNumber string `json:"number"`
-//	Type         string `json:"type"`
-//	TypeID       int    `json:"typeID,omitempty"`
-//	CowName      string `json:"cowName"`
-//	Status       string `json:"status"`
-//	Charge       int    `json:"chargeLevel"`
-//	CowID        int    `json:"cowID"`
-//	FarmID       int    `json:"-"`
-//}
-//
+type CowBreed struct {
+	ID    int    `json:"breed_id"`
+	Breed string `json:"breed"`
+}
+
+type Cow struct {
+	ID         int       `json:"id"`
+	Name       string    `json:"name"`
+	BreedID    int       `json:"breed_id"`
+	FarmID     int       `json:"farm_id"`
+	BolusNum   string    `json:"bolus_sn"`
+	DateOfBorn time.Time `json:"dateOfBorn"`
+	AddedAt    time.Time `json:"added_at"`
+	BolusType  string    `json:"bolus_type"`
+}
+
 //type Health struct {
 //	Drink       bool    `json:"drink"`
 //	Stress      bool    `json:"stress"`

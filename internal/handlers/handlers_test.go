@@ -569,6 +569,86 @@ func TestBaseHandler_Register(t *testing.T) {
 	}
 }
 
+func TestBaseHandler_GetCowBreeds(t *testing.T) {
+	type user struct {
+		body string
+	}
+	reliableData := struct {
+		user user
+	}{
+		user: user{
+			body: "{\"login\": \"User\", \"password\": \"pa$$word_1\"}",
+		},
+	}
+
+	type want struct {
+		code int
+		body string
+	}
+	type args struct {
+		cookie string
+	}
+	tests := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "Get breeds",
+			args: args{
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+			},
+			want: want{
+				code: http.StatusOK,
+				body: "[{\"breed_id\":1,\"breed\":\"Голштинская\"},{\"breed_id\":2,\"breed\":\"Красная датская\"},{\"breed_id\":3,\"breed\":\"Айрширская\"}]",
+			},
+		},
+		{
+			name: "No user",
+			args: args{
+				cookie: "a09bccf2b294353452b34dc0e08d8b582a",
+			},
+			want: want{
+				code: http.StatusUnauthorized,
+				body: "{\"Message\":\"Unauthorized\"}",
+			},
+		},
+	}
+	logger.Wr = logger.New()
+	ds := storage.NewDBMockStorage(context.Background())
+	handler := NewBaseHandler(ds)
+	gin.SetMode(gin.ReleaseMode)
+	router := gin.Default()
+	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithDecompressFn(gzip.DefaultDecompressHandle)))
+	router.GET("/api/cows/breeds", handler.GetCowBreeds)
+	router.NoRoute(handler.ResponseBadRequest)
+
+	//пропишем пользователя
+	router.POST("/api/user/register", handler.Register)
+	w := httptest.NewRecorder()
+	body := bytes.NewBuffer([]byte(reliableData.user.body))
+	req, _ := http.NewRequest("POST", "/api/user/register", body)
+	router.ServeHTTP(w, req)
+
+	//запуск тестов
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			cookie := &http.Cookie{Name: config.Cookie, Value: tt.args.cookie, HttpOnly: true}
+			req, err := http.NewRequest("GET", "/api/cows/breeds", nil)
+			req.AddCookie(cookie)
+
+			router.ServeHTTP(w, req)
+			assert.Nil(t, err)
+			assert.Equal(t, tt.want.code, w.Code)
+			if w.Code == http.StatusUnauthorized {
+				input, _ := ioutil.ReadAll(w.Body)
+				assert.Equal(t, tt.want.body, string(input))
+			}
+		})
+	}
+}
+
 //func Test_getIDFromJSON(t *testing.T) {
 //	assert.NotNil(t, nil)
 //}

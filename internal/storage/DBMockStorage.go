@@ -88,7 +88,7 @@ func (s *DBStorage) createMockTables(ctx context.Context) {
 		"(%s INTEGER PRIMARY KEY AUTOINCREMENT, %s TEXT NOT NULL, "+
 		"%s INTEGER NOT NULL, %s INTEGER NOT NULL, "+
 		"%s INTEGER UNIQUE NOT NULL, %s DATE NOT NULL, "+
-		"%s TIMESTAMP NOT NULL, %s bolus_type NOT NULL, "+
+		"%s TIMESTAMP NOT NULL, %s TEXT NOT NULL, "+
 		"%s BOOLEAN NOT NULL DEFAULT FALSE)",
 		TCow, FCowID, FName, FBreedID, FFarmID, FBolus, FDateOfBorn, FAddedAt, FBolusType, FDeleted)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
@@ -142,7 +142,15 @@ func (s *DBStorage) createMockTables(ctx context.Context) {
 	//	logger.Wr.Panic().Err(err).Msgf("Fail then creating foreign key  %s <-> %s", TMonitoringData, TCow)
 	//}
 	//logger.Wr.Info().Msgf("foreign key created: %s <-> %s", TMonitoringData, TCow)
+
+	//test data
+	sqlStr = fmt.Sprintf("INSERT INTO %s(%s) VALUES "+
+		"(?), (?), (?)", TBreed, FBreed)
+	_, err = s.db.ExecContext(ctxIn, sqlStr, "Голштинская", "Красная датская", "Айрширская")
+	if err != nil {
+		logger.Wr.Panic().Err(err).Msgf("Fail to insert data into %s", TBreed)
+	}
+	logger.Wr.Info().Msgf("data inserted into %s", TBreed)
 }
 
 //TODO внешние ключи
-//TODO перечисдение
