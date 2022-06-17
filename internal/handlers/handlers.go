@@ -2,8 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -134,6 +132,11 @@ func (h *BaseHandler) GetFarms(c *gin.Context) {
 	cookie, _ := c.Cookie(config.Cookie)
 	logger.Wr.Info().Msgf("Get farms for user: %v", cookie)
 	u := h.storage.GetUser(c, cookie)
+	if u == nil {
+		logger.Wr.Info().Msg("Bad cookie or cookie not found")
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"Message": "Unauthorized"})
+		return
+	}
 	farms, err := h.storage.GetFarms(c, u.ID)
 
 	if err != nil {
@@ -195,6 +198,14 @@ func (h *BaseHandler) AddFarm(c *gin.Context) {
 }
 
 func (h *BaseHandler) DelFarm(c *gin.Context) {
+	cookie, _ := c.Cookie(config.Cookie)
+	logger.Wr.Info().Msgf("Delete farm for user: %v", cookie)
+	u := h.storage.GetUser(c, cookie)
+	if u == nil {
+		logger.Wr.Info().Msg("Bad cookie or cookie not found")
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"Message": "Unauthorized"})
+		return
+	}
 	farmID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		logger.Wr.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
@@ -202,7 +213,7 @@ func (h *BaseHandler) DelFarm(c *gin.Context) {
 		return
 	}
 	logger.Wr.Info().Msgf("Delete farm with index: %v", farmID)
-	err = h.storage.DelFarm(c, farmID)
+	err = h.storage.DelFarm(c, u.ID, farmID)
 	if err != nil {
 		switch err.(type) {
 		case *storage.EmptyError:
@@ -395,18 +406,18 @@ func (h *BaseHandler) ResponseBadRequest(c *gin.Context) {
 	logger.Wr.Info().Msgf("bad request. Error code: %v", http.StatusBadRequest)
 }
 
-func getIDFromJSON(reader io.ReadCloser) ([]int, error) {
-	input, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Printf("parse JSON array: body = %s\n", input)
-
-	var IDs []int
-	if err := json.Unmarshal(input, &IDs); err != nil {
-		fmt.Printf("\tID unmarshal error: %s\n", err)
-		return nil, err
-	}
-	fmt.Printf("\tID unmarshal success")
-	return IDs, nil
-}
+//func getIDFromJSON(reader io.ReadCloser) ([]int, error) {
+//	input, err := ioutil.ReadAll(reader)
+//	if err != nil {
+//		return nil, err
+//	}
+//	fmt.Printf("parse JSON array: body = %s\n", input)
+//
+//	var IDs []int
+//	if err := json.Unmarshal(input, &IDs); err != nil {
+//		fmt.Printf("\tID unmarshal error: %s\n", err)
+//		return nil, err
+//	}
+//	fmt.Printf("\tID unmarshal success")
+//	return IDs, nil
+//}

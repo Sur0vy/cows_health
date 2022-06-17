@@ -158,15 +158,15 @@ func (s *DBStorage) AddFarm(c context.Context, farm Farm) error {
 	return nil
 }
 
-func (s *DBStorage) DelFarm(c context.Context, farmID int) error {
+func (s *DBStorage) DelFarm(c context.Context, userID int, farmID int) error {
 	ctxIn, cancel := context.WithTimeout(c, time.Second)
 	defer cancel()
 
 	sqlStr := fmt.Sprintf("UPDATE %s SET %s = TRUE "+
-		" WHERE %s = $1 AND %s = FALSE",
-		TFarm, FDeleted, FFarmID, FDeleted)
+		" WHERE %s = $1 AND %s = $2 AND %s = FALSE",
+		TFarm, FDeleted, FUserID, FFarmID, FDeleted)
 
-	res, err := s.db.ExecContext(ctxIn, sqlStr, farmID)
+	res, err := s.db.ExecContext(ctxIn, sqlStr, userID, farmID)
 	if err != nil {
 		logger.Wr.Warn().Err(err).Msg("db request error")
 		return err

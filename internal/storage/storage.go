@@ -15,7 +15,7 @@ type Storage interface {
 
 	GetFarms(с context.Context, userID int) (string, error)
 	AddFarm(с context.Context, farm Farm) error
-	DelFarm(с context.Context, farmID int) error
+	DelFarm(с context.Context, userID int, farmID int) error
 
 	//GetFarmInfo(ctx context.Context, farmID int) (string, error)
 	//
