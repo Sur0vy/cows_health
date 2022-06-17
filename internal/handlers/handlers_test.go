@@ -18,11 +18,6 @@ import (
 )
 
 func TestBaseHandler_AddFarm(t *testing.T) {
-	type want struct {
-		cookie string
-		code   int
-		body   string
-	}
 	testData := []struct {
 		body   string
 		cookie string
@@ -32,45 +27,61 @@ func TestBaseHandler_AddFarm(t *testing.T) {
 			cookie: "8f9bfe9d1345237cb3b2b205864da075",
 		},
 	}
+	type want struct {
+		code int
+		body string
+	}
+	type args struct {
+		cookie string
+		body   string
+	}
 	tests := []struct {
 		name string
-		args string
+		args args
 		want want
 	}{
 		{
 			name: "New farm",
-			args: "{\"name\": \"Farm\",\"address\": \"Moscow\"}",
-			want: want{
-				code:   http.StatusCreated,
+			args: args{
 				cookie: "8f9bfe9d1345237cb3b2b205864da075",
-				body:   "",
+				body:   "{\"name\": \"Farm\",\"address\": \"Moscow\"}",
+			},
+			want: want{
+				code: http.StatusCreated,
+				body: "",
 			},
 		},
 		{
 			name: "Duplicate farm",
-			args: "{\"name\": \"Farm\",\"address\": \"Moscow\"}",
-			want: want{
-				code:   http.StatusConflict,
+			args: args{
 				cookie: "8f9bfe9d1345237cb3b2b205864da075",
-				body:   "",
+				body:   "{\"name\": \"Farm\",\"address\": \"Moscow\"}",
+			},
+			want: want{
+				code: http.StatusConflict,
+				body: "",
 			},
 		},
 		{
 			name: "Bad request",
-			args: "\"Farm\",\"address\": \"Moscow\"}",
-			want: want{
-				code:   http.StatusBadRequest,
+			args: args{
 				cookie: "8f9bfe9d1345237cb3b2b205864da075",
-				body:   "",
+				body:   "\"Farm\",\"address\": \"Moscow\"}",
+			},
+			want: want{
+				code: http.StatusBadRequest,
+				body: "",
 			},
 		},
 		{
 			name: "Bad cookie",
-			args: "{\"name\": \"Farm\",\"address\": \"Moscow\"}",
-			want: want{
-				code:   http.StatusUnauthorized,
+			args: args{
 				cookie: "8f9bfe932423423b2b205864da075",
-				body:   "{\"Message\":\"Unauthorized\"}",
+				body:   "{\"name\": \"Farm\",\"address\": \"Moscow\"}",
+			},
+			want: want{
+				code: http.StatusUnauthorized,
+				body: "{\"Message\":\"Unauthorized\"}",
 			},
 		},
 	}
@@ -80,7 +91,7 @@ func TestBaseHandler_AddFarm(t *testing.T) {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithDecompressFn(gzip.DefaultDecompressHandle)))
-	router.POST("/farms", handler.AddFarm)
+	router.POST("/api/farms", handler.AddFarm)
 	router.NoRoute(handler.ResponseBadRequest)
 	w := httptest.NewRecorder()
 
@@ -94,10 +105,10 @@ func TestBaseHandler_AddFarm(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-			cookie := &http.Cookie{Name: config.Cookie, Value: tt.want.cookie, HttpOnly: true}
+			cookie := &http.Cookie{Name: config.Cookie, Value: tt.args.cookie, HttpOnly: true}
 
-			body := bytes.NewBuffer([]byte(tt.args))
-			req, err := http.NewRequest("POST", "/farms", body)
+			body := bytes.NewBuffer([]byte(tt.args.body))
+			req, err := http.NewRequest("POST", "/api/farms", body)
 			req.AddCookie(cookie)
 
 			router.ServeHTTP(w, req)
@@ -112,11 +123,253 @@ func TestBaseHandler_AddFarm(t *testing.T) {
 }
 
 func TestBaseHandler_DelFarm(t *testing.T) {
-	assert.NotNil(t, nil)
+	type user struct {
+		body string
+	}
+	type farm struct {
+		body   string
+		cookie string
+	}
+	reliableData := struct {
+		users []user
+		farms []farm
+	}{
+		users: []user{
+			{
+				body: "{\"login\": \"User\", \"password\": \"pa$$word_1\"}",
+			},
+			{
+				body: "{\"login\": \"User2\", \"password\": \"pa$$word_2\"}",
+			},
+		},
+		farms: []farm{
+			{
+				body:   "{\"name\": \"Farm1\",\"address\": \"Moscow\"}",
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+			},
+			{
+				body:   "{\"name\": \"Farm2\",\"address\": \"Omsk\"}",
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+			},
+		},
+	}
+
+	type want struct {
+		code int
+		body string
+	}
+	type args struct {
+		cookie string
+		ID     string
+	}
+	tests := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "Del farm user1",
+			args: args{
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+				ID:     "1",
+			},
+			want: want{
+				code: http.StatusOK,
+				body: "",
+			},
+		},
+		{
+			name: "Del not exists farm",
+			args: args{
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+				ID:     "3",
+			},
+			want: want{
+				code: http.StatusConflict,
+				body: "",
+			},
+		},
+		{
+			name: "No user",
+			args: args{
+				cookie: "a09bccf2b294353452b34dc0e08d8b582a",
+				ID:     "5",
+			},
+			want: want{
+				code: http.StatusUnauthorized,
+				body: "{\"Message\":\"Unauthorized\"}",
+			},
+		},
+	}
+	logger.Wr = logger.New()
+	ds := storage.NewDBMockStorage(context.Background())
+	handler := NewBaseHandler(ds)
+	gin.SetMode(gin.ReleaseMode)
+	router := gin.Default()
+	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithDecompressFn(gzip.DefaultDecompressHandle)))
+	router.DELETE("/api/farms/:id", handler.DelFarm)
+	router.NoRoute(handler.ResponseBadRequest)
+
+	//пропишем пользователя
+	router.POST("/api/user/register", handler.Register)
+	for _, tt := range reliableData.users {
+		w := httptest.NewRecorder()
+		body := bytes.NewBuffer([]byte(tt.body))
+		req, _ := http.NewRequest("POST", "/api/user/register", body)
+		router.ServeHTTP(w, req)
+	}
+	//пропишем фермы
+	router.POST("/api/farms", handler.AddFarm)
+	for _, tt := range reliableData.farms {
+		w := httptest.NewRecorder()
+		cookie := &http.Cookie{Name: config.Cookie, Value: tt.cookie, HttpOnly: true}
+		body := bytes.NewBuffer([]byte(tt.body))
+		req, _ := http.NewRequest("POST", "/api/farms", body)
+		req.AddCookie(cookie)
+		router.ServeHTTP(w, req)
+	}
+
+	//запуск тестов
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			cookie := &http.Cookie{Name: config.Cookie, Value: tt.args.cookie, HttpOnly: true}
+			URL := "/api/farms/" + tt.args.ID
+			req, err := http.NewRequest("DELETE", URL, nil)
+			req.AddCookie(cookie)
+
+			router.ServeHTTP(w, req)
+			assert.Nil(t, err)
+			assert.Equal(t, tt.want.code, w.Code)
+			if w.Code == http.StatusUnauthorized {
+				input, _ := ioutil.ReadAll(w.Body)
+				assert.Equal(t, tt.want.body, string(input))
+			}
+		})
+	}
 }
 
 func TestBaseHandler_GetFarms(t *testing.T) {
-	assert.NotNil(t, nil)
+	type user struct {
+		body string
+	}
+	type farm struct {
+		body   string
+		cookie string
+	}
+	reliableData := struct {
+		users []user
+		farms []farm
+	}{
+		users: []user{
+			{
+				body: "{\"login\": \"User\", \"password\": \"pa$$word_1\"}",
+			},
+			{
+				body: "{\"login\": \"User2\", \"password\": \"pa$$word_2\"}",
+			},
+		},
+		farms: []farm{
+			{
+				body:   "{\"name\": \"Farm1\",\"address\": \"Moscow\"}",
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+			},
+			{
+				body:   "{\"name\": \"Farm2\",\"address\": \"Omsk\"}",
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+			},
+		},
+	}
+
+	type want struct {
+		code int
+		body string
+	}
+	type args struct {
+		cookie string
+	}
+	tests := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "Get farm user1",
+			args: args{
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+			},
+			want: want{
+				code: http.StatusOK,
+				body: "[{\"farm_id\": 0,\"name\": \"Farm1\",\"address\": \"Moscow\"}," +
+					"{\"farm_id\": 1,\"name\": \"Farm2\",\"address\": \"Omsk\"}]",
+			},
+		},
+		{
+			name: "Get farm user2",
+			args: args{
+				cookie: "a09bccf2b2963982b34dc0e08d8b582a",
+			},
+			want: want{
+				code: http.StatusNoContent,
+				body: "",
+			},
+		},
+		{
+			name: "No user",
+			args: args{
+				cookie: "a09bccf2b294353452b34dc0e08d8b582a",
+			},
+			want: want{
+				code: http.StatusUnauthorized,
+				body: "{\"Message\":\"Unauthorized\"}",
+			},
+		},
+	}
+	logger.Wr = logger.New()
+	ds := storage.NewDBMockStorage(context.Background())
+	handler := NewBaseHandler(ds)
+	gin.SetMode(gin.ReleaseMode)
+	router := gin.Default()
+	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithDecompressFn(gzip.DefaultDecompressHandle)))
+	router.GET("/api/farms", handler.GetFarms)
+	router.NoRoute(handler.ResponseBadRequest)
+
+	//пропишем пользователя
+	router.POST("/api/user/register", handler.Register)
+	for _, tt := range reliableData.users {
+		w := httptest.NewRecorder()
+		body := bytes.NewBuffer([]byte(tt.body))
+		req, _ := http.NewRequest("POST", "/api/user/register", body)
+		router.ServeHTTP(w, req)
+	}
+	//пропишем фермы
+	router.POST("/api/farms", handler.AddFarm)
+	for _, tt := range reliableData.farms {
+		w := httptest.NewRecorder()
+		cookie := &http.Cookie{Name: config.Cookie, Value: tt.cookie, HttpOnly: true}
+		body := bytes.NewBuffer([]byte(tt.body))
+		req, _ := http.NewRequest("POST", "/api/farms", body)
+		req.AddCookie(cookie)
+		router.ServeHTTP(w, req)
+	}
+
+	//запуск тестов
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			cookie := &http.Cookie{Name: config.Cookie, Value: tt.args.cookie, HttpOnly: true}
+			req, err := http.NewRequest("GET", "/api/farms", nil)
+			req.AddCookie(cookie)
+
+			router.ServeHTTP(w, req)
+			assert.Nil(t, err)
+			assert.Equal(t, tt.want.code, w.Code)
+			if w.Code == http.StatusUnauthorized {
+				input, _ := ioutil.ReadAll(w.Body)
+				assert.Equal(t, tt.want.body, string(input))
+			}
+		})
+	}
 }
 
 func TestBaseHandler_Login(t *testing.T) {
@@ -316,6 +569,6 @@ func TestBaseHandler_Register(t *testing.T) {
 	}
 }
 
-func Test_getIDFromJSON(t *testing.T) {
-	assert.NotNil(t, nil)
-}
+//func Test_getIDFromJSON(t *testing.T) {
+//	assert.NotNil(t, nil)
+//}
