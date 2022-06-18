@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	_ "github.com/jackc/pgx/v4/stdlib"
@@ -230,13 +232,53 @@ func (s *DBStorage) GetCowBreeds(c context.Context) (string, error) {
 	return string(data), nil
 }
 
-//func (s *DBStorage) GetFarmInfo(ctx context.Context, farmID int) (string, error) {
-//	return "", nil
-//}
-//
-//func (s *DBStorage) GetCows(_ context.Context, farmID int) (string, error) {
-//	return "", nil
-//}
+func (s *DBStorage) GetCows(c context.Context, farmID int) (string, error) {
+	ctxIn, cancel := context.WithTimeout(c, 5*time.Second)
+	defer cancel()
+
+	sqlStr := fmt.Sprintf("SELECT %s, %s, %s, %s, %s, %s, %s FROM %s "+
+		"WHERE %s = $1 AND NOT %s",
+		FCowID, FName, FBreedID, FBolus, FDateOfBorn, FAddedAt, FBolusType, TCow, FFarmID, FDeleted)
+	rows, err := s.db.QueryContext(ctxIn, sqlStr, farmID)
+
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("db request error")
+		return "", err
+	}
+
+	defer func() {
+		_ = rows.Close()
+	}()
+
+	// пробегаем по всем записям
+	var cows []Cow
+	for rows.Next() {
+		var cow Cow
+		err = rows.Scan(&cow.ID, &cow.Name, &cow.BreedID, &cow.BolusNum,
+			&cow.DateOfBorn, &cow.AddedAt, &cow.BolusType)
+		if err != nil {
+			logger.Wr.Warn().Err(err).Msg("get cow instance error")
+			return "", err
+		}
+		cow.FarmID = farmID
+		cows = append(cows, cow)
+	}
+
+	if err := rows.Err(); err != nil {
+		logger.Wr.Warn().Err(err).Msg("get cow rows error")
+		return "", err
+	}
+
+	if len(cows) == 0 {
+		return "", NewEmptyError("no cows on farm")
+	}
+	data, err := json.Marshal(&cows)
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("marshal to json error")
+		return "", err
+	}
+	return string(data), nil
+}
 
 func (s *DBStorage) GetBolusesTypes(c context.Context) (string, error) {
 	ctxIn, cancel := context.WithTimeout(c, 5*time.Second)
@@ -282,17 +324,17 @@ func (s *DBStorage) GetBolusesTypes(c context.Context) (string, error) {
 	return string(data), nil
 }
 
-//func (s *DBStorage) GetCowInfo(ctx context.Context, cowID int) (string, error) {
-//	return "", nil
-//}
+func (s *DBStorage) GetFarmInfo(c context.Context, farmID int) (string, error) {
+	return "", nil
+}
 
-//func (s *DBStorage) AddMonitoringData(ctx context.Context, data MonitoringData) error {
-//	return nil
-//}
-//
-//func (s *DBStorage) DeleteCows(ctx context.Context, IDs []int) error {
-//	return nil
-//}
+func (s *DBStorage) GetCowInfo(c context.Context, cowID int) (string, error) {
+	return "", nil
+}
+
+func (s *DBStorage) AddMonitoringData(c context.Context, data MonitoringData) error {
+	return nil
+}
 
 func (s *DBStorage) AddCow(c context.Context, cow Cow) error {
 	ctxIn, cancel := context.WithTimeout(c, 2*time.Second)
@@ -331,6 +373,63 @@ func (s *DBStorage) AddCow(c context.Context, cow Cow) error {
 	if err != nil {
 		logger.Wr.Warn().Err(err).Msg("creating health record error")
 		return err
+	}
+	return nil
+}
+
+func (s *DBStorage) DeleteCows(c context.Context, CowIDs []int) error {
+	ctxIn, cancel := context.WithTimeout(c, 5*time.Second)
+	defer cancel()
+
+	var arr []interface{}
+	var pos strings.Builder
+
+	for num, ID := range CowIDs {
+		if pos.Len() != 0 {
+			pos.WriteString(", ")
+		}
+		arr = append(arr, ID)
+		pos.WriteString("$")
+		pos.WriteString(strconv.Itoa(num + 1))
+	}
+
+	sqlStr := fmt.Sprintf("UPDATE %s SET %s = TRUE "+
+		" WHERE %s IN("+pos.String()+") AND %s = FALSE",
+		TCow, FDeleted, FCowID, FDeleted)
+
+	res, err := s.db.ExecContext(ctxIn, sqlStr, arr...)
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("db request error")
+		return err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("db request error")
+		return err
+	}
+	if count == 0 {
+		logger.Wr.Info().Msgf("no cows with indexes %v", CowIDs)
+		return NewEmptyError("no cows for current user")
+	}
+
+	//health
+	sqlStr = fmt.Sprintf("UPDATE %s SET %s = TRUE "+
+		" WHERE %s IN("+pos.String()+") AND %s = FALSE",
+		THealth, FDeleted, FCowID, FDeleted)
+
+	res, err = s.db.ExecContext(ctxIn, sqlStr, arr...)
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("db request error")
+		return err
+	}
+	count, err = res.RowsAffected()
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("db request error")
+		return err
+	}
+	if count == 0 {
+		logger.Wr.Info().Msgf("no health with indexes %v", CowIDs)
+		return NewEmptyError("no health for current user")
 	}
 	return nil
 }

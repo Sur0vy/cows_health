@@ -3,10 +3,12 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"github.com/Sur0vy/cows_health.git/internal/config"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-contrib/gzip"
@@ -300,8 +302,8 @@ func TestBaseHandler_GetFarms(t *testing.T) {
 			},
 			want: want{
 				code: http.StatusOK,
-				body: "[{\"farm_id\": 0,\"name\": \"Farm1\",\"address\": \"Moscow\"}," +
-					"{\"farm_id\": 1,\"name\": \"Farm2\",\"address\": \"Omsk\"}]",
+				body: "[{\"farm_id\":1,\"name\":\"Farm1\",\"address\":\"Moscow\"}," +
+					"{\"farm_id\":2,\"name\":\"Farm2\",\"address\":\"Omsk\"}]",
 			},
 		},
 		{
@@ -364,10 +366,8 @@ func TestBaseHandler_GetFarms(t *testing.T) {
 			router.ServeHTTP(w, req)
 			assert.Nil(t, err)
 			assert.Equal(t, tt.want.code, w.Code)
-			if w.Code == http.StatusUnauthorized {
-				input, _ := ioutil.ReadAll(w.Body)
-				assert.Equal(t, tt.want.body, string(input))
-			}
+			input, _ := ioutil.ReadAll(w.Body)
+			assert.Equal(t, tt.want.body, string(input))
 		})
 	}
 }
@@ -577,7 +577,7 @@ func TestBaseHandler_GetCowBreeds(t *testing.T) {
 		user user
 	}{
 		user: user{
-			body: "{\"login\": \"User\", \"password\": \"pa$$word_1\"}",
+			body: "{\"login\":\"User\",\"password\":\"pa$$word_1\"}",
 		},
 	}
 
@@ -641,10 +641,8 @@ func TestBaseHandler_GetCowBreeds(t *testing.T) {
 			router.ServeHTTP(w, req)
 			assert.Nil(t, err)
 			assert.Equal(t, tt.want.code, w.Code)
-			if w.Code == http.StatusUnauthorized {
-				input, _ := ioutil.ReadAll(w.Body)
-				assert.Equal(t, tt.want.body, string(input))
-			}
+			input, _ := ioutil.ReadAll(w.Body)
+			assert.Equal(t, tt.want.body, string(input))
 		})
 	}
 }
@@ -787,6 +785,398 @@ func TestBaseHandler_AddCow(t *testing.T) {
 	}
 }
 
-//func Test_getIDFromJSON(t *testing.T) {
-//	assert.NotNil(t, nil)
-//}
+func TestBaseHandler_DelCows(t *testing.T) {
+	type user struct {
+		body string
+	}
+	type farm struct {
+		body   string
+		cookie string
+	}
+	type cow struct {
+		body   string
+		cookie string
+	}
+	reliableData := struct {
+		users []user
+		farms []farm
+		cows  []cow
+	}{
+		users: []user{
+			{
+				body: "{\"login\": \"User\", \"password\": \"pa$$word_1\"}",
+			},
+			{
+				body: "{\"login\": \"User2\", \"password\": \"pa$$word_2\"}",
+			},
+		},
+		farms: []farm{
+			{
+				body:   "{\"name\": \"Farm1\",\"address\": \"Moscow\"}",
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+			},
+			{
+				body:   "{\"name\": \"Farm2\",\"address\": \"Omsk\"}",
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+			},
+		},
+		cows: []cow{
+			{
+				body:   "{\"name\": \"корова 1\",\"breed_id\": 1,\"farm_id\": 1,\"bolus_sn\": 1221,\"date_of_born\": \"2020-04-09T23:00:00Z\",\"bolus_type\": \"С датчиком PH\"}",
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+			},
+			{
+				body:   "{\"name\": \"корова 2\",\"breed_id\": 1,\"farm_id\": 1,\"bolus_sn\": 1222,\"date_of_born\": \"2020-04-09T23:00:00Z\",\"bolus_type\": \"С датчиком PH\"}",
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+			},
+			{
+				body:   "{\"name\": \"корова 3\",\"breed_id\": 1,\"farm_id\": 1,\"bolus_sn\": 1223,\"date_of_born\": \"2020-04-09T23:00:00Z\",\"bolus_type\": \"С датчиком PH\"}",
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+			},
+		},
+	}
+
+	type want struct {
+		code int
+		body string
+	}
+	type args struct {
+		cookie string
+		body   string
+	}
+	tests := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "Del cow",
+			args: args{
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+				body:   "[1,2,3]",
+			},
+			want: want{
+				code: http.StatusAccepted,
+				body: "",
+			},
+		},
+		{
+			name: "Missing cows",
+			args: args{
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+				body:   "[1]",
+			},
+			want: want{
+				code: http.StatusConflict,
+				body: "",
+			},
+		},
+		{
+			name: "No user",
+			args: args{
+				cookie: "a09bccf2b294353452b34dc0e08d8b582a",
+				body:   "[1]",
+			},
+			want: want{
+				code: http.StatusUnauthorized,
+				body: "{\"Message\":\"Unauthorized\"}",
+			},
+		},
+		{
+			name: "Bad request",
+			args: args{
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+				body:   "wrong json",
+			},
+			want: want{
+				code: http.StatusBadRequest,
+				body: "",
+			},
+		},
+	}
+
+	logger.Wr = logger.New()
+	ds := storage.NewDBMockStorage(context.Background())
+	handler := NewBaseHandler(ds)
+	gin.SetMode(gin.ReleaseMode)
+	router := gin.Default()
+	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithDecompressFn(gzip.DefaultDecompressHandle)))
+	router.DELETE("/api/cows", handler.DelCows)
+	router.NoRoute(handler.ResponseBadRequest)
+
+	//пропишем пользователя
+	router.POST("/api/user/register", handler.Register)
+	for _, tt := range reliableData.users {
+		w := httptest.NewRecorder()
+		body := bytes.NewBuffer([]byte(tt.body))
+		req, _ := http.NewRequest("POST", "/api/user/register", body)
+		router.ServeHTTP(w, req)
+	}
+	//пропишем фермы
+	router.POST("/api/farms", handler.AddFarm)
+	for _, tt := range reliableData.farms {
+		w := httptest.NewRecorder()
+		cookie := &http.Cookie{Name: config.Cookie, Value: tt.cookie, HttpOnly: true}
+		body := bytes.NewBuffer([]byte(tt.body))
+		req, _ := http.NewRequest("POST", "/api/farms", body)
+		req.AddCookie(cookie)
+		router.ServeHTTP(w, req)
+	}
+	//пропишем коров
+	router.POST("/api/cows", handler.AddCow)
+	for _, tt := range reliableData.cows {
+		w := httptest.NewRecorder()
+		cookie := &http.Cookie{Name: config.Cookie, Value: tt.cookie, HttpOnly: true}
+		body := bytes.NewBuffer([]byte(tt.body))
+		req, _ := http.NewRequest("POST", "/api/cows", body)
+		req.AddCookie(cookie)
+		router.ServeHTTP(w, req)
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			cookie := &http.Cookie{Name: config.Cookie, Value: tt.args.cookie, HttpOnly: true}
+
+			body := bytes.NewBuffer([]byte(tt.args.body))
+			req, err := http.NewRequest("DELETE", "/api/cows", body)
+			req.AddCookie(cookie)
+
+			router.ServeHTTP(w, req)
+			assert.Nil(t, err)
+			assert.Equal(t, tt.want.code, w.Code)
+			if w.Code == http.StatusUnauthorized {
+				input, _ := ioutil.ReadAll(w.Body)
+				assert.Equal(t, tt.want.body, string(input))
+			}
+		})
+	}
+}
+
+func TestBaseHandler_GetCows(t *testing.T) {
+	type user struct {
+		body string
+	}
+	type farm struct {
+		body   string
+		cookie string
+	}
+	type cow struct {
+		body   string
+		cookie string
+	}
+
+	reliableData := struct {
+		users []user
+		farms []farm
+		cows  []cow
+	}{
+		users: []user{
+			{
+				body: "{\"login\": \"User\", \"password\": \"pa$$word_1\"}",
+			},
+			{
+				body: "{\"login\": \"User2\", \"password\": \"pa$$word_2\"}",
+			},
+		},
+		farms: []farm{
+			{
+				body:   "{\"name\": \"Farm1\",\"address\": \"Moscow\"}",
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+			},
+			{
+				body:   "{\"name\": \"Farm2\",\"address\": \"Omsk\"}",
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+			},
+		},
+		cows: []cow{
+			{
+				body:   "{\"name\": \"корова 1\",\"breed_id\": 1,\"farm_id\": 1,\"bolus_sn\": 1221,\"date_of_born\": \"2020-04-09T23:00:00Z\",\"bolus_type\": \"С датчиком PH\"}",
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+			},
+			{
+				body:   "{\"name\": \"корова 2\",\"breed_id\": 1,\"farm_id\": 1,\"bolus_sn\": 1222,\"date_of_born\": \"2020-04-09T23:00:00Z\",\"bolus_type\": \"С датчиком PH\"}",
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+			},
+			{
+				body:   "{\"name\": \"корова 3\",\"breed_id\": 1,\"farm_id\": 2,\"bolus_sn\": 1223,\"date_of_born\": \"2020-04-09T23:00:00Z\",\"bolus_type\": \"С датчиком PH\"}",
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+			},
+		},
+	}
+	type data struct {
+		bolusNum int
+		farmID   int
+		name     string
+	}
+	type want struct {
+		code int
+		body string
+		data []data
+	}
+	type args struct {
+		farm   string
+		cookie string
+	}
+	tests := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "Get cow farm1",
+			args: args{
+				farm:   "1",
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+			},
+			want: want{
+				code: http.StatusOK,
+				data: []data{
+					{
+						bolusNum: 1221,
+						farmID:   1,
+						name:     "корова 1",
+					},
+					{
+						bolusNum: 1222,
+						farmID:   1,
+						name:     "корова 2",
+					},
+				},
+			},
+		},
+		{
+			name: "No farm",
+			args: args{
+				farm:   "10",
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+			},
+			want: want{
+				code: http.StatusNoContent,
+				body: "",
+			},
+		},
+		{
+			name: "No user",
+			args: args{
+				farm:   "1",
+				cookie: "8f9bfe3249d1345237cb3b2b205864da075",
+			},
+			want: want{
+				code: http.StatusUnauthorized,
+				body: "{\"Message\":\"Unauthorized\"}",
+			},
+		},
+	}
+	logger.Wr = logger.New()
+	ds := storage.NewDBMockStorage(context.Background())
+	handler := NewBaseHandler(ds)
+	gin.SetMode(gin.ReleaseMode)
+	router := gin.Default()
+	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithDecompressFn(gzip.DefaultDecompressHandle)))
+	router.GET("/api/farms/:id/cows", handler.GetCows)
+	router.NoRoute(handler.ResponseBadRequest)
+
+	//пропишем пользователя
+	router.POST("/api/user/register", handler.Register)
+	for _, tt := range reliableData.users {
+		w := httptest.NewRecorder()
+		body := bytes.NewBuffer([]byte(tt.body))
+		req, _ := http.NewRequest("POST", "/api/user/register", body)
+		router.ServeHTTP(w, req)
+	}
+	//пропишем фермы
+	router.POST("/api/farms", handler.AddFarm)
+	for _, tt := range reliableData.farms {
+		w := httptest.NewRecorder()
+		cookie := &http.Cookie{Name: config.Cookie, Value: tt.cookie, HttpOnly: true}
+		body := bytes.NewBuffer([]byte(tt.body))
+		req, _ := http.NewRequest("POST", "/api/farms", body)
+		req.AddCookie(cookie)
+		router.ServeHTTP(w, req)
+	}
+	//пропишем коров
+	router.POST("/api/cows", handler.AddCow)
+	for _, tt := range reliableData.cows {
+		w := httptest.NewRecorder()
+		cookie := &http.Cookie{Name: config.Cookie, Value: tt.cookie, HttpOnly: true}
+		body := bytes.NewBuffer([]byte(tt.body))
+		req, _ := http.NewRequest("POST", "/api/cows", body)
+		req.AddCookie(cookie)
+		router.ServeHTTP(w, req)
+	}
+
+	//запуск тестов
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			cookie := &http.Cookie{Name: config.Cookie, Value: tt.args.cookie, HttpOnly: true}
+			req, err := http.NewRequest("GET", "/api/farms/"+tt.args.farm+"/cows", nil)
+			req.AddCookie(cookie)
+
+			router.ServeHTTP(w, req)
+			assert.Nil(t, err)
+			assert.Equal(t, tt.want.code, w.Code)
+			input, _ := ioutil.ReadAll(w.Body)
+			if w.Code == http.StatusOK {
+				var cowResp []storage.Cow
+				err = json.Unmarshal(input, &cowResp)
+				assert.Nil(t, err)
+				for i, c := range cowResp {
+					assert.Equal(t, c.BolusNum, tt.want.data[i].bolusNum)
+					assert.Equal(t, c.FarmID, tt.want.data[i].farmID)
+					assert.Equal(t, c.Name, tt.want.data[i].name)
+				}
+			} else {
+				assert.Equal(t, tt.want.body, string(input))
+			}
+		})
+	}
+}
+
+func Test_getIDFromJSON(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    string
+		want    []int
+		wantErr bool
+	}{
+		{
+			name: "one entry",
+			args: "[1]",
+			want: []int{
+				1,
+			},
+			wantErr: false,
+		},
+		{
+			name: "many entries",
+			args: "[3,5,8]",
+			want: []int{
+				3,
+				5,
+				8,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "wrong",
+			args:    "[w1]",
+			wantErr: true,
+		},
+	}
+	logger.Wr = logger.New()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			in := ioutil.NopCloser(strings.NewReader(tt.args))
+			got, err := getIDFromJSON(in)
+
+			if !tt.wantErr {
+				assert.Nil(t, err)
+				assert.Equal(t, got, tt.want)
+			} else {
+				assert.NotNil(t, err)
+			}
+		})
+	}
+}
