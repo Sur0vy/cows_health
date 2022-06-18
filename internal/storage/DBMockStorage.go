@@ -52,96 +52,59 @@ func (s *DBStorage) createMockTables(ctx context.Context) {
 	sqlStr = fmt.Sprintf("CREATE TABLE %s "+
 		"(%s INTEGER PRIMARY KEY AUTOINCREMENT, %s TEXT NOT NULL, "+
 		"%s TEXT UNIQUE NOT NULL, %s INTEGER NOT NULL, "+
-		"%s BOOLEAN NOT NULL DEFAULT FALSE)",
-		TFarm, FFarmID, FName, FAddress, FUserID, FDeleted)
+		"%s BOOLEAN NOT NULL DEFAULT FALSE, "+
+		"FOREIGN KEY (%s) REFERENCES %s(%s))",
+		TFarm, FFarmID, FName, FAddress, FUserID, FDeleted,
+		FUserID, TUser, FUserID)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
 		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TFarm)
 	}
 	logger.Wr.Info().Msgf("Table created: %s", TFarm)
 
-	//4. health table
+	//4. cow table (проверить, есть ли тип такой)
+	sqlStr = fmt.Sprintf("CREATE TABLE %s "+
+		"(%s INTEGER PRIMARY KEY AUTOINCREMENT, %s TEXT NOT NULL, "+
+		"%s INTEGER NOT NULL, %s INTEGER NOT NULL, "+
+		"%s INTEGER UNIQUE NOT NULL, %s DATE NOT NULL, "+
+		"%s TIMESTAMP NOT NULL, %s TEXT NOT NULL, "+
+		"%s BOOLEAN NOT NULL DEFAULT FALSE, "+
+		"FOREIGN KEY (%s) REFERENCES %s(%s), "+
+		"FOREIGN KEY (%s) REFERENCES %s(%s))",
+		TCow, FCowID, FName, FBreedID, FFarmID, FBolus, FDateOfBorn, FAddedAt, FBolusType, FDeleted,
+		FBreedID, TBreed, FBreedID, FFarmID, TFarm, FFarmID)
+	_, err = s.db.ExecContext(ctxIn, sqlStr)
+	if err != nil {
+		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TCow)
+	}
+	logger.Wr.Info().Msgf("Table created: %s", TCow)
+
+	//5. health table
 	sqlStr = fmt.Sprintf("CREATE TABLE %s "+
 		"(%s INTEGER UNIQUE PRIMARY KEY, %s TEXT, "+
 		"%s TEXT, %s TEXT, %s TIMESTAMP, "+
-		"%s BOOLEAN NOT NULL DEFAULT FALSE)",
-		THealth, FCowID, FDrink, FStress, FIll, FUpdatedAt, FDeleted)
+		"%s BOOLEAN NOT NULL DEFAULT FALSE, "+
+		"FOREIGN KEY (%s) REFERENCES %s(%s))",
+		THealth, FCowID, FDrink, FStress, FIll, FUpdatedAt, FDeleted,
+		FCowID, TCow, FCowID)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
 		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", THealth)
 	}
 	logger.Wr.Info().Msgf("Table created: %s", THealth)
 
-	//5. monitoring data table
+	//6. monitoring data table
 	sqlStr = fmt.Sprintf("CREATE TABLE %s "+
 		"(%s INTEGER PRIMARY KEY AUTOINCREMENT, %s INTEGER NOT NULL, "+
-		"%s timestamp, %s FLOAT, %s FLOAT, %s FLOAT, %s FLOAT)",
-		TMonitoringData, FMDID, FCowID, FAddedAt, FPH, FTemperature, FMovement, FCharge)
+		"%s timestamp, %s FLOAT, %s FLOAT, %s FLOAT, %s FLOAT, "+
+		"FOREIGN KEY (%s) REFERENCES %s(%s))",
+		TMonitoringData, FMDID, FCowID, FAddedAt, FPH, FTemperature, FMovement, FCharge,
+		FCowID, TCow, FCowID)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
 		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TMonitoringData)
 	}
 	logger.Wr.Info().Msgf("Table created: %s", TMonitoringData)
-
-	//6. cow table (проверить, есть ли тип такой)
-	sqlStr = fmt.Sprintf("CREATE TABLE %s "+
-		"(%s INTEGER PRIMARY KEY AUTOINCREMENT, %s TEXT NOT NULL, "+
-		"%s INTEGER NOT NULL, %s INTEGER NOT NULL, "+
-		"%s INTEGER UNIQUE NOT NULL, %s DATE NOT NULL, "+
-		"%s TIMESTAMP NOT NULL, %s TEXT NOT NULL, "+
-		"%s BOOLEAN NOT NULL DEFAULT FALSE)",
-		TCow, FCowID, FName, FBreedID, FFarmID, FBolus, FDateOfBorn, FAddedAt, FBolusType, FDeleted)
-	_, err = s.db.ExecContext(ctxIn, sqlStr)
-	if err != nil {
-		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TCow)
-	}
-	logger.Wr.Info().Msgf("Table created: %s", TCow)
-	//
-	////links
-	////user-farm link
-	//sqlStr = fmt.Sprintf("ALTER TABLE %s ADD CONSTRAINT fk_user_farm FOREIGN KEY (%s) REFERENCES %s (%s)",
-	//	TFarm, FUserID, TUser, FUserID)
-	//_, err = s.db.ExecContext(ctxIn, sqlStr)
-	//if err != nil {
-	//	logger.Wr.Panic().Err(err).Msgf("Fail then creating foreign key  %s <-> %s", TFarm, TUser)
-	//}
-	//logger.Wr.Info().Msgf("foreign key created: %s <-> %s", TFarm, TUser)
-	//
-	////cow-breed link
-	//sqlStr = fmt.Sprintf("ALTER TABLE %s ADD CONSTRAINT fk_cow_breed FOREIGN KEY (%s) REFERENCES %s (%s)",
-	//	TCow, FBreedID, TBreed, FBreedID)
-	//_, err = s.db.ExecContext(ctxIn, sqlStr)
-	//if err != nil {
-	//	logger.Wr.Panic().Err(err).Msgf("Fail then creating foreign key  %s <-> %s", TCow, TBreed)
-	//}
-	//logger.Wr.Info().Msgf("foreign key created: %s <-> %s", TCow, TBreed)
-	//
-	////cow-farm link
-	//sqlStr = fmt.Sprintf("ALTER TABLE %s ADD CONSTRAINT fk_cow_farm FOREIGN KEY (%s) REFERENCES %s (%s)",
-	//	TCow, FFarmID, TFarm, FFarmID)
-	//_, err = s.db.ExecContext(ctxIn, sqlStr)
-	//if err != nil {
-	//	logger.Wr.Panic().Err(err).Msgf("Fail then creating foreign key  %s <-> %s", TCow, TFarm)
-	//}
-	//logger.Wr.Info().Msgf("foreign key created: %s <-> %s", TCow, TFarm)
-	//
-	////health-cow link
-	//sqlStr = fmt.Sprintf("ALTER TABLE %s ADD CONSTRAINT fk_cow_health FOREIGN KEY (%s) REFERENCES %s (%s)",
-	//	THealth, FCowID, TCow, FCowID)
-	//_, err = s.db.ExecContext(ctxIn, sqlStr)
-	//if err != nil {
-	//	logger.Wr.Panic().Err(err).Msgf("Fail then creating foreign key  %s <-> %s", THealth, TCow)
-	//}
-	//logger.Wr.Info().Msgf("foreign key created: %s <-> %s", THealth, TCow)
-	//
-	////monitoring data-cow link
-	//sqlStr = fmt.Sprintf("ALTER TABLE %s ADD CONSTRAINT fk_cow_md FOREIGN KEY (%s) REFERENCES %s (%s)",
-	//	TMonitoringData, FCowID, TCow, FCowID)
-	//_, err = s.db.ExecContext(ctxIn, sqlStr)
-	//if err != nil {
-	//	logger.Wr.Panic().Err(err).Msgf("Fail then creating foreign key  %s <-> %s", TMonitoringData, TCow)
-	//}
-	//logger.Wr.Info().Msgf("foreign key created: %s <-> %s", TMonitoringData, TCow)
 
 	//test data
 	sqlStr = fmt.Sprintf("INSERT INTO %s(%s) VALUES "+

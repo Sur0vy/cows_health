@@ -298,29 +298,41 @@ func (s *DBStorage) AddCow(c context.Context, cow Cow) error {
 	ctxIn, cancel := context.WithTimeout(c, 2*time.Second)
 	defer cancel()
 
-	//var userID int
-	//sqlStr := fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1",
-	///	FFarmID, TFarm, FAddress)
-	//row := s.db.QueryRowContext(ctxIn, sqlStr, farm.Address)
-	//err := row.Scan(&userID)
-	//
-	//if err == nil {
-	//	logger.Wr.Info().Msg("farm already exist")
-	//	return NewExistError("farm already exist")
-	//} else if err != sql.ErrNoRows {
-	//	logger.Wr.Warn().Err(err).Msg("db request error")
-	//	return err
-	//}
-	//
-	////добавление
-	//sqlStr = fmt.Sprintf("INSERT INTO %s (%s, %s, %s) VALUES ($1, $2, $3)",
-	//	TFarm, FName, FAddress, FUserID)
-	//_, err = s.db.ExecContext(ctxIn, sqlStr, farm.Name, farm.Address, farm.UserID)
-	//if err != nil {
-	//	logger.Wr.Warn().Err(err).Msg("inserting farm error")
-	//	return err
-	//}
-	//return nil
+	var bolusID int
+	sqlStr := fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1",
+		FCowID, TCow, FBolus)
+	row := s.db.QueryRowContext(ctxIn, sqlStr, cow.BolusNum)
+	err := row.Scan(&bolusID)
+
+	if err == nil {
+		logger.Wr.Info().Msg("duplicate bolus")
+		return NewExistError("duplicate bolus")
+	}
+
+	//добавление коровы
+	sqlStr = fmt.Sprintf("INSERT INTO %s (%s, %s, %s, %s, %s, %s, %s) "+
+		"VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING %s",
+		TCow, FName, FBreedID, FFarmID, FBolus, FDateOfBorn, FAddedAt, FBolusType, FCowID)
+
+	row = s.db.QueryRowContext(ctxIn, sqlStr, cow.Name, cow.BreedID, cow.FarmID,
+		cow.BolusNum, cow.DateOfBorn, cow.AddedAt, cow.BolusType)
+
+	err = row.Scan(&cow.ID)
+
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("db request error")
+		return err
+	}
+
+	//добавление в таблицу здоровье
+	sqlStr = fmt.Sprintf("INSERT INTO %s(%s) VALUES ($1)",
+		THealth, FCowID)
+	_, err = s.db.ExecContext(ctxIn, sqlStr, cow.ID)
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("creating health record error")
+		return err
+	}
+	return nil
 }
 
 func (s *DBStorage) connect(DSN string) {
