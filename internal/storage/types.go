@@ -1,6 +1,8 @@
 package storage
 
-import "time"
+import (
+	"time"
+)
 
 type User struct {
 	ID       int    `json:"-"`
@@ -25,8 +27,8 @@ type Cow struct {
 	Name       string    `json:"name"`
 	BreedID    int       `json:"breed_id"`
 	FarmID     int       `json:"farm_id"`
-	BolusNum   string    `json:"bolus_sn"`
-	DateOfBorn time.Time `json:"dateOfBorn"`
+	BolusNum   int       `json:"bolus_sn"`
+	DateOfBorn time.Time `json:"date_of_born"`
 	AddedAt    time.Time `json:"added_at"`
 	BolusType  string    `json:"bolus_type"`
 }

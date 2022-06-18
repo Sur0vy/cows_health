@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -394,8 +395,9 @@ func (h *BaseHandler) AddCow(c *gin.Context) {
 		return
 	}
 
+	cow.AddedAt = time.Now()
+	//добавим в таблицу коров
 	err = h.storage.AddCow(c, cow)
-
 	if err != nil {
 		switch err.(type) {
 		case *storage.ExistError:

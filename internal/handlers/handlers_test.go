@@ -93,10 +93,10 @@ func TestBaseHandler_AddFarm(t *testing.T) {
 	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithDecompressFn(gzip.DefaultDecompressHandle)))
 	router.POST("/api/farms", handler.AddFarm)
 	router.NoRoute(handler.ResponseBadRequest)
-	w := httptest.NewRecorder()
 
 	router.POST("/api/user/register", handler.Register)
 	for _, tt := range testData {
+		w := httptest.NewRecorder()
 		body := bytes.NewBuffer([]byte(tt.body))
 		req, _ := http.NewRequest("POST", "/api/user/register", body)
 		router.ServeHTTP(w, req)
@@ -636,6 +636,144 @@ func TestBaseHandler_GetCowBreeds(t *testing.T) {
 			w := httptest.NewRecorder()
 			cookie := &http.Cookie{Name: config.Cookie, Value: tt.args.cookie, HttpOnly: true}
 			req, err := http.NewRequest("GET", "/api/cows/breeds", nil)
+			req.AddCookie(cookie)
+
+			router.ServeHTTP(w, req)
+			assert.Nil(t, err)
+			assert.Equal(t, tt.want.code, w.Code)
+			if w.Code == http.StatusUnauthorized {
+				input, _ := ioutil.ReadAll(w.Body)
+				assert.Equal(t, tt.want.body, string(input))
+			}
+		})
+	}
+}
+
+func TestBaseHandler_AddCow(t *testing.T) {
+	type user struct {
+		body string
+	}
+	type farm struct {
+		body   string
+		cookie string
+	}
+	reliableData := struct {
+		users []user
+		farms []farm
+	}{
+		users: []user{
+			{
+				body: "{\"login\": \"User\", \"password\": \"pa$$word_1\"}",
+			},
+			{
+				body: "{\"login\": \"User2\", \"password\": \"pa$$word_2\"}",
+			},
+		},
+		farms: []farm{
+			{
+				body:   "{\"name\": \"Farm1\",\"address\": \"Moscow\"}",
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+			},
+			{
+				body:   "{\"name\": \"Farm2\",\"address\": \"Omsk\"}",
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+			},
+		},
+	}
+
+	type want struct {
+		code int
+		body string
+	}
+	type args struct {
+		cookie string
+		body   string
+	}
+	tests := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "Add cow",
+			args: args{
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+				body:   "{\"name\": \"корова 1\",\"breed_id\": 1,\"farm_id\": 1,\"bolus_sn\": 1221,\"date_of_born\": \"2020-04-09T23:00:00Z\",\"bolus_type\": \"С датчиком PH\"}",
+			},
+			want: want{
+				code: http.StatusCreated,
+				body: "",
+			},
+		},
+		{
+			name: "Duplicate bolus",
+			args: args{
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+				body:   "{\"name\": \"корова 1\",\"breed_id\": 1,\"farm_id\": 2,\"bolus_sn\": 1221,\"date_of_born\": \"2020-04-09T23:00:00Z\",\"bolus_type\": \"С датчиком PH\"}",
+			},
+			want: want{
+				code: http.StatusConflict,
+				body: "",
+			},
+		},
+		{
+			name: "No user",
+			args: args{
+				cookie: "a09bccf2b294353452b34dc0e08d8b582a",
+				body:   "{\"name\": \"корова 2\",\"breed_id\": 1,\"farm_id\": 1,\"bolus_sn\": 1223,\"date_of_born\": \"2020-04-09T23:00:00Z\",\"bolus_type\": \"С датчиком PH\"}",
+			},
+			want: want{
+				code: http.StatusUnauthorized,
+				body: "{\"Message\":\"Unauthorized\"}",
+			},
+		},
+		{
+			name: "Bad request",
+			args: args{
+				cookie: "8f9bfe9d1345237cb3b2b205864da075",
+				body:   "wrong json",
+			},
+			want: want{
+				code: http.StatusBadRequest,
+				body: "",
+			},
+		},
+	}
+	logger.Wr = logger.New()
+	ds := storage.NewDBMockStorage(context.Background())
+	handler := NewBaseHandler(ds)
+	gin.SetMode(gin.ReleaseMode)
+	router := gin.Default()
+	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithDecompressFn(gzip.DefaultDecompressHandle)))
+	router.POST("/api/cows", handler.AddCow)
+	router.NoRoute(handler.ResponseBadRequest)
+
+	//пропишем пользователя
+	router.POST("/api/user/register", handler.Register)
+	for _, tt := range reliableData.users {
+		w := httptest.NewRecorder()
+		body := bytes.NewBuffer([]byte(tt.body))
+		req, _ := http.NewRequest("POST", "/api/user/register", body)
+		router.ServeHTTP(w, req)
+	}
+	//пропишем фермы
+	router.POST("/api/farms", handler.AddFarm)
+	for _, tt := range reliableData.farms {
+		w := httptest.NewRecorder()
+		cookie := &http.Cookie{Name: config.Cookie, Value: tt.cookie, HttpOnly: true}
+		body := bytes.NewBuffer([]byte(tt.body))
+		req, _ := http.NewRequest("POST", "/api/farms", body)
+		req.AddCookie(cookie)
+		router.ServeHTTP(w, req)
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			cookie := &http.Cookie{Name: config.Cookie, Value: tt.args.cookie, HttpOnly: true}
+
+			body := bytes.NewBuffer([]byte(tt.args.body))
+			req, err := http.NewRequest("POST", "/api/cows", body)
 			req.AddCookie(cookie)
 
 			router.ServeHTTP(w, req)
