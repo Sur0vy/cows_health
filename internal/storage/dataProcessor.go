@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"math"
 	"sync"
 	"time"
 
@@ -28,6 +29,11 @@ func ProcessMonitoringData(c context.Context, wg *sync.WaitGroup, s Storage, dat
 		return
 	}
 	//запросим данные за последние 10 минут
+	var (
+		avgPH       float64
+		avgTemp     float64
+		avgMovement float64
+	)
 	mds, err := s.GetMonitoringData(c, data.CowID, 10)
 	if err != nil {
 		logger.Wr.Info().Msgf("monitoring data get success for %v", data.CowID)
@@ -35,13 +41,51 @@ func ProcessMonitoringData(c context.Context, wg *sync.WaitGroup, s Storage, dat
 	} else {
 		logger.Wr.Warn().Err(err).Msgf("getting monitoring data error %v", data.CowID)
 		for i, md := range mds {
+			avgPH += md.PH
+			avgTemp += md.Temperature
+			avgMovement += md.Movement
 			logger.Wr.Info().Msgf("%d = %v", i, md)
 		}
+		avgPH /= float64(len(mds))
+		avgTemp /= float64(len(mds))
+		avgMovement /= float64(len(mds))
 	}
 
 	//запустим алгоримт определения здоровья и половой активности
-	var health Health
-	health.UpdatedAt = time.Now()
+	health := Health{
+		CowID:     cowID,
+		Estrus:    false,
+		Ill:       "",
+		UpdatedAt: time.Now(),
+	}
+	for _, md := range mds {
+		if (math.Abs(md.Movement-avgMovement)/md.Movement > 0.1) &&
+			(math.Abs(md.Temperature-avgTemp)/md.Temperature > 0.1) {
+			health.Estrus = true
+			break
+		}
+	}
+	for _, md := range mds {
+		if (math.Abs(avgMovement-md.Movement)/md.Movement > 0.2) &&
+			(math.Abs(md.Temperature-avgTemp)/md.Temperature > 0.1) &&
+			(avgPH > 6) {
+			health.Ill = "Инфекционное заболевание"
+			break
+		}
+	}
+	flag := false
+	if health.Ill == "" {
+		for _, md := range mds {
+			if (md.Temperature < 40) || (md.Temperature > 41) ||
+				(md.PH > 5.5) {
+				flag = true
+				break
+			}
+		}
+		if !flag {
+			health.Ill = "Нервное заболевание"
+		}
+	}
 
 	//запишем в состояние о корове
 	if err := s.UpdateHealth(c, health); err == nil {

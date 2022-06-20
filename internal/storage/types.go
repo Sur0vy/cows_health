@@ -38,10 +38,10 @@ type MonitoringData struct {
 	BolusNum    int       `json:"bolus_sn"`
 	CowID       int       `json:"cow_id"`
 	AddedAt     time.Time `json:"added_at"`
-	PH          float32   `json:"ph"`
-	Temperature float32   `json:"temperature"`
-	Movement    float32   `json:"movement"`
-	Charge      float32   `json:"charge"`
+	PH          float64   `json:"ph"`
+	Temperature float64   `json:"temperature"`
+	Movement    float64   `json:"movement"`
+	Charge      float64   `json:"charge"`
 }
 
 type Health struct {

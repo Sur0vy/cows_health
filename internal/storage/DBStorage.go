@@ -415,11 +415,10 @@ func (s *DBStorage) UpdateHealth(c context.Context, data Health) error {
 	ctxIn, cancel := context.WithTimeout(c, time.Second)
 	defer cancel()
 
-	sqlStr := fmt.Sprintf("UPDATE %s SET %s = $1, %s = $2, %s = $3 WHERE %s = $4)",
-		THealth, FUpdatedAt, FIll, FEstrus, FUpdatedAt)
+	sqlStr := fmt.Sprintf("UPDATE %s SET %s = $1, %s = $2, %s = $3 WHERE %s = $4",
+		THealth, FUpdatedAt, FIll, FEstrus, FCowID)
 
-	_, err := s.db.ExecContext(ctxIn, sqlStr, data.UpdatedAt, data.UpdatedAt,
-		data.Ill, data.Estrus, data.CowID)
+	_, err := s.db.ExecContext(ctxIn, sqlStr, data.UpdatedAt, data.Ill, data.Estrus, data.CowID)
 	if err != nil {
 		logger.Wr.Warn().Err(err).Msg("inserting health data error")
 		return err
