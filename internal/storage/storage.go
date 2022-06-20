@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
-
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -27,6 +26,9 @@ type Storage interface {
 	GetCowBreeds(c context.Context) (string, error)
 	GetBolusesTypes(c context.Context) (string, error)
 	AddMonitoringData(c context.Context, data MonitoringData) error
+	UpdateHealth(c context.Context, data Health) error
+	HasBolus(c context.Context, BolusNum int) int
+	GetMonitoringData(c context.Context, cowID int, interval int) ([]MonitoringData, error)
 }
 
 func getMD5Hash(text string) string {

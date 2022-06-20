@@ -34,21 +34,22 @@ type Cow struct {
 }
 
 type MonitoringData struct {
-	BolusNum    string  `json:"bolus_sn"`
-	AddedAt     string  `json:"added_at"`
-	PH          float32 `json:"ph"`
-	Temperature float32 `json:"temperature"`
-	Movement    float32 `json:"movement"`
-	Charge      float32 `json:"charge"`
+	ID          int       `json:"id"`
+	BolusNum    int       `json:"bolus_sn"`
+	CowID       int       `json:"cow_id"`
+	AddedAt     time.Time `json:"added_at"`
+	PH          float32   `json:"ph"`
+	Temperature float32   `json:"temperature"`
+	Movement    float32   `json:"movement"`
+	Charge      float32   `json:"charge"`
 }
 
-//type Health struct {
-//	Drink       bool    `json:"drink"`
-//	Stress      bool    `json:"stress"`
-//	Temperature float32 `json:"temperature"`
-//	Activity    float32 `json:"activity"`
-//	CowID       int     `json:"-"`
-//}
+type Health struct {
+	CowID     int       `json:"id"`
+	Ill       string    `json:"ill"`
+	Estrus    bool      `json:"estrus"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
 
 //
 //type CowInfo struct {
