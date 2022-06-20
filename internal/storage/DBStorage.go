@@ -324,12 +324,69 @@ func (s *DBStorage) GetBolusesTypes(c context.Context) (string, error) {
 	return string(data), nil
 }
 
-func (s *DBStorage) GetFarmInfo(c context.Context, farmID int) (string, error) {
-	return "", nil
-}
-
 func (s *DBStorage) GetCowInfo(c context.Context, cowID int) (string, error) {
-	return "", nil
+	ctxIn, cancel := context.WithTimeout(c, time.Second)
+	defer cancel()
+
+	var cowInfo CowInfo
+	sqlStr := fmt.Sprintf("SELECT c.%s, b.%s, c.%s, c.%s, "+
+		"c.%s, h.%s, h.%s, h.%s, "+
+		"md.%s, md.%s, md.%s, md.%s, md.%s "+
+		"FROM %s AS c "+
+		"JOIN %s AS b ON b.%s = c.%s "+
+		"JOIN %s AS h ON h.%s = c.%s "+
+		"JOIN %s AS md ON md.%s = c.%s "+
+		"WHERE ((EXTRACT(EPOCH FROM now()) - "+
+		"EXTRACT(EPOCH FROM md.%s)) < $1) AND (md.%s = $2) "+
+		"ORDER BY c.%s ASC",
+		FName, FBreed, FBolus, FDateOfBorn,
+		FBolusType, FEstrus, FIll, FUpdatedAt,
+		FAddedAt, FPH, FTemperature, FMovement, FCharge,
+		TCow,
+		TBreed, FBreedID, FBreedID,
+		THealth, FCowID, FCowID,
+		TMonitoringData, FCowID, FCowID,
+		FAddedAt, FCowID,
+		FAddedAt)
+
+	hour := 3600
+	intervalInS := hour * 24
+	rows, err := s.db.QueryContext(ctxIn, sqlStr, intervalInS, cowID)
+
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("db request error")
+		return "", err
+	}
+
+	defer func() {
+		_ = rows.Close()
+	}()
+
+	// пробегаем по всем записям
+	for rows.Next() {
+		var md MonitoringData
+		err = rows.Scan(&cowInfo.Summary.Name, &cowInfo.Summary.Breed, &cowInfo.Summary.BolusNum,
+			&cowInfo.Summary.DateOfBorn, &cowInfo.Summary.BolusType,
+			&cowInfo.Health.Estrus, &cowInfo.Health.Ill, &cowInfo.Health.UpdatedAt,
+			&md.AddedAt, &md.PH, &md.Temperature, &md.Movement, &md.Charge)
+		if err != nil {
+			logger.Wr.Warn().Err(err).Msg("get monitoring data instance error")
+			return "", err
+		}
+		cowInfo.History = append(cowInfo.History, md)
+	}
+
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("db request error")
+		return "", err
+	}
+
+	data, err := json.Marshal(cowInfo)
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("marshal to json error")
+		return "", err
+	}
+	return string(data), nil
 }
 
 func (s *DBStorage) HasBolus(c context.Context, BolusNum int) int {
