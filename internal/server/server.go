@@ -28,7 +28,6 @@ func SetupServer(s storage.Storage) *gin.Engine {
 	farms.GET("", handler.GetFarms)
 	farms.POST("", handler.AddFarm)
 	farms.DELETE("/:id", handler.DelFarm)
-	farms.GET("/:id/info", handler.GetFarmInfo)
 	farms.GET("/:id/cows", handler.GetCows)
 
 	boluses := api.Group("/boluses")

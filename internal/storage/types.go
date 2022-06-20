@@ -23,9 +23,10 @@ type CowBreed struct {
 }
 
 type Cow struct {
-	ID         int       `json:"id"`
+	ID         int       `json:"id,omitempty"`
 	Name       string    `json:"name"`
-	BreedID    int       `json:"breed_id"`
+	BreedID    int       `json:"breed_id,omitempty"`
+	Breed      string    `json:"breed,omitempty"`
 	FarmID     int       `json:"farm_id,omitempty"`
 	BolusNum   int       `json:"bolus_sn"`
 	DateOfBorn time.Time `json:"date_of_born"`
@@ -34,9 +35,9 @@ type Cow struct {
 }
 
 type MonitoringData struct {
-	ID          int       `json:"id"`
-	BolusNum    int       `json:"bolus_sn"`
-	CowID       int       `json:"cow_id"`
+	ID          int       `json:"id,omitempty"`
+	BolusNum    int       `json:"bolus_sn,omitempty"`
+	CowID       int       `json:"cow_id,omitempty"`
 	AddedAt     time.Time `json:"added_at"`
 	PH          float64   `json:"ph"`
 	Temperature float64   `json:"temperature"`
@@ -45,15 +46,14 @@ type MonitoringData struct {
 }
 
 type Health struct {
-	CowID     int       `json:"id"`
+	CowID     int       `json:"id,omitempty"`
 	Ill       string    `json:"ill"`
 	Estrus    bool      `json:"estrus"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-//
-//type CowInfo struct {
-//	Health  Health           `json:"health"`
-//	Summary Cow              `json:"summary"`
-//	History []MonitoringData `json:"history"`
-//}
+type CowInfo struct {
+	Health  Health           `json:"health"`
+	Summary Cow              `json:"summary"`
+	History []MonitoringData `json:"history"`
+}

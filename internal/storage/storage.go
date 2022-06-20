@@ -19,8 +19,6 @@ type Storage interface {
 	AddCow(c context.Context, cow Cow) error
 	GetCows(c context.Context, farmID int) (string, error)
 	DeleteCows(c context.Context, CowIDs []int) error
-
-	GetFarmInfo(c context.Context, farmID int) (string, error)
 	GetCowInfo(c context.Context, farmID int) (string, error)
 
 	GetCowBreeds(c context.Context) (string, error)

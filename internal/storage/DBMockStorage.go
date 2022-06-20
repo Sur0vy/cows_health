@@ -67,12 +67,17 @@ func (s *DBStorage) createMockTables(ctx context.Context) {
 		"(%s INTEGER PRIMARY KEY AUTOINCREMENT, %s TEXT NOT NULL, "+
 		"%s INTEGER NOT NULL, %s INTEGER NOT NULL, "+
 		"%s INTEGER UNIQUE NOT NULL, %s DATE NOT NULL, "+
-		"%s TIMESTAMP with time zone NOT NULL, %s TEXT NOT NULL, "+
+		"%s DATE NOT NULL, %s TEXT NOT NULL, "+
 		"%s BOOLEAN NOT NULL DEFAULT FALSE, "+
 		"FOREIGN KEY (%s) REFERENCES %s(%s), "+
 		"FOREIGN KEY (%s) REFERENCES %s(%s))",
-		TCow, FCowID, FName, FBreedID, FFarmID, FBolus, FDateOfBorn, FAddedAt, FBolusType, FDeleted,
-		FBreedID, TBreed, FBreedID, FFarmID, TFarm, FFarmID)
+		TCow, FCowID, FName,
+		FBreedID, FFarmID,
+		FBolus, FDateOfBorn,
+		FAddedAt, FBolusType,
+		FDeleted,
+		FBreedID, TBreed, FBreedID,
+		FFarmID, TFarm, FFarmID)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
 		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TCow)
