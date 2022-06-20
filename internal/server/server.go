@@ -34,7 +34,7 @@ func SetupServer(s storage.Storage) *gin.Engine {
 	boluses := api.Group("/boluses")
 	boluses.Use(CookieMidlewared(s))
 	boluses.GET("/types", handler.GetBolusesTypes)
-	boluses.POST("/data", handler.AddBolusData)
+	boluses.POST("/data", handler.AddMonitoringData)
 
 	cows := api.Group("/cows")
 	cows.Use(CookieMidlewared(s))

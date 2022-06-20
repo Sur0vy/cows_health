@@ -27,8 +27,7 @@ const (
 	FDateOfBorn string = "date_of_born"
 	FBolusType  string = "bolus_type"
 
-	FDrink     string = "drink"
-	FStress    string = "stress"
+	FEstrus    string = "estrus"
 	FIll       string = "ill"
 	FUpdatedAt string = "updated_at"
 

@@ -67,7 +67,7 @@ func (s *DBStorage) createMockTables(ctx context.Context) {
 		"(%s INTEGER PRIMARY KEY AUTOINCREMENT, %s TEXT NOT NULL, "+
 		"%s INTEGER NOT NULL, %s INTEGER NOT NULL, "+
 		"%s INTEGER UNIQUE NOT NULL, %s DATE NOT NULL, "+
-		"%s TIMESTAMP NOT NULL, %s TEXT NOT NULL, "+
+		"%s TIMESTAMP with time zone NOT NULL, %s TEXT NOT NULL, "+
 		"%s BOOLEAN NOT NULL DEFAULT FALSE, "+
 		"FOREIGN KEY (%s) REFERENCES %s(%s), "+
 		"FOREIGN KEY (%s) REFERENCES %s(%s))",
@@ -81,11 +81,11 @@ func (s *DBStorage) createMockTables(ctx context.Context) {
 
 	//5. health table
 	sqlStr = fmt.Sprintf("CREATE TABLE %s "+
-		"(%s INTEGER UNIQUE PRIMARY KEY, %s TEXT, "+
-		"%s TEXT, %s TEXT, %s TIMESTAMP, "+
+		"(%s INTEGER UNIQUE PRIMARY KEY, %s BOOLEAN, "+
+		"%s TEXT, %s TIMESTAMP with time zone, "+
 		"%s BOOLEAN NOT NULL DEFAULT FALSE, "+
 		"FOREIGN KEY (%s) REFERENCES %s(%s))",
-		THealth, FCowID, FDrink, FStress, FIll, FUpdatedAt, FDeleted,
+		THealth, FCowID, FEstrus, FIll, FUpdatedAt, FDeleted,
 		FCowID, TCow, FCowID)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
@@ -96,7 +96,7 @@ func (s *DBStorage) createMockTables(ctx context.Context) {
 	//6. monitoring data table
 	sqlStr = fmt.Sprintf("CREATE TABLE %s "+
 		"(%s INTEGER PRIMARY KEY AUTOINCREMENT, %s INTEGER NOT NULL, "+
-		"%s timestamp, %s FLOAT, %s FLOAT, %s FLOAT, %s FLOAT, "+
+		"%s TIMESTAMP with time zone, %s FLOAT, %s FLOAT, %s FLOAT, %s FLOAT, "+
 		"FOREIGN KEY (%s) REFERENCES %s(%s))",
 		TMonitoringData, FMDID, FCowID, FAddedAt, FPH, FTemperature, FMovement, FCharge,
 		FCowID, TCow, FCowID)

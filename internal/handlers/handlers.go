@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -319,30 +320,29 @@ func (h *BaseHandler) GetCowInfo(c *gin.Context) {
 }
 
 func (h *BaseHandler) AddMonitoringData(c *gin.Context) {
-	//	input, err := ioutil.ReadAll(c.Request.Body)
-	//	if err != nil {
-	//		c.Writer.WriteHeader(http.StatusBadRequest)
-	//		return
-	//	}
-	//	fmt.Println(string(input))
-	//	var monitoringData storage.MonitoringData
-	//	if err := json.Unmarshal(input, &monitoringData); err != nil {
-	//		c.Writer.WriteHeader(http.StatusBadRequest)
-	//		return
-	//	}
-	//
-	//	err = h.storage.AddMonitoringData(c, monitoringData)
-	//	if err != nil {
-	//		switch err.(type) {
-	//		case *storage.EmptyError:
-	//			c.Writer.WriteHeader(http.StatusConflict)
-	//			return
-	//		default:
-	//			c.Writer.WriteHeader(http.StatusInternalServerError)
-	//			return
-	//		}
-	//	}
-	//	c.Status(http.StatusCreated)
+	input, err := ioutil.ReadAll(c.Request.Body)
+	if err != nil {
+		logger.Wr.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	var data []storage.MonitoringData
+	if err := json.Unmarshal(input, &data); err != nil {
+		logger.Wr.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	logger.Wr.Info().Msg("Monitoring data will be added")
+	var wg sync.WaitGroup
+	for _, md := range data {
+		wg.Add(1)
+		storage.ProcessMonitoringData(c, &wg, h.storage, md)
+	}
+	wg.Wait()
+	logger.Wr.Info().Msg("All monitoring data was added")
+	c.Status(http.StatusAccepted)
 }
 
 func (h *BaseHandler) GetBolusesTypes(c *gin.Context) {
