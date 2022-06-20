@@ -376,6 +376,11 @@ func (s *DBStorage) GetCowInfo(c context.Context, cowID int) (string, error) {
 		cowInfo.History = append(cowInfo.History, md)
 	}
 
+	if err := rows.Err(); err != nil {
+		logger.Wr.Warn().Err(err).Msg("get cow info rows error")
+		return "", err
+	}
+
 	if err != nil {
 		logger.Wr.Warn().Err(err).Msg("db request error")
 		return "", err
@@ -458,6 +463,11 @@ func (s *DBStorage) GetMonitoringData(c context.Context, cowID int, interval int
 			return nil, err
 		}
 		res = append(res, md)
+	}
+
+	if err := rows.Err(); err != nil {
+		logger.Wr.Warn().Err(err).Msg("get monitoring data rows error")
+		return nil, err
 	}
 
 	if err != nil {
