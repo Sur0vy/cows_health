@@ -279,9 +279,9 @@ func (h *BaseHandler) GetCowInfo(c *gin.Context) {
 		return
 	}
 
-	cowIdStr := c.Param("id")
-	logger.Wr.Info().Msgf("cow ID: %s", cowIdStr)
-	cowID, err := strconv.Atoi(cowIdStr)
+	cowIDStr := c.Param("id")
+	logger.Wr.Info().Msgf("cow ID: %s", cowIDStr)
+	cowID, err := strconv.Atoi(cowIDStr)
 	if err != nil {
 		c.Writer.WriteHeader(http.StatusBadRequest)
 		return
