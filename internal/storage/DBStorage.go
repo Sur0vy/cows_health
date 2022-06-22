@@ -54,8 +54,8 @@ func (s *DBStorage) AddUser(c context.Context, user User) (string, error) {
 	return userHash, nil
 }
 
-func (s *DBStorage) GetUser(ctx context.Context, userHash string) *User {
-	ctxIn, cancel := context.WithTimeout(ctx, 5*time.Second)
+func (s *DBStorage) GetUser(c context.Context, userHash string) *User {
+	ctxIn, cancel := context.WithTimeout(c, 5*time.Second)
 	defer cancel()
 
 	user := &User{}
@@ -324,15 +324,172 @@ func (s *DBStorage) GetBolusesTypes(c context.Context) (string, error) {
 	return string(data), nil
 }
 
-func (s *DBStorage) GetFarmInfo(c context.Context, farmID int) (string, error) {
-	return "", nil
+func (s *DBStorage) GetCowInfo(c context.Context, cowID int) (string, error) {
+	ctxIn, cancel := context.WithTimeout(c, time.Second)
+	defer cancel()
+
+	var cowInfo CowInfo
+	sqlStr := fmt.Sprintf("SELECT c.%s, b.%s, c.%s, c.%s, "+
+		"c.%s, h.%s, h.%s, h.%s, "+
+		"md.%s, md.%s, md.%s, md.%s, md.%s "+
+		"FROM %s AS c "+
+		"JOIN %s AS b ON b.%s = c.%s "+
+		"JOIN %s AS h ON h.%s = c.%s "+
+		"JOIN %s AS md ON md.%s = c.%s "+
+		"WHERE ((EXTRACT(EPOCH FROM now()) - "+
+		"EXTRACT(EPOCH FROM md.%s)) < $1) AND (md.%s = $2) "+
+		"ORDER BY c.%s ASC",
+		FName, FBreed, FBolus, FDateOfBorn,
+		FBolusType, FEstrus, FIll, FUpdatedAt,
+		FAddedAt, FPH, FTemperature, FMovement, FCharge,
+		TCow,
+		TBreed, FBreedID, FBreedID,
+		THealth, FCowID, FCowID,
+		TMonitoringData, FCowID, FCowID,
+		FAddedAt, FCowID,
+		FAddedAt)
+
+	hour := 3600
+	intervalInS := hour * 24
+	rows, err := s.db.QueryContext(ctxIn, sqlStr, intervalInS, cowID)
+
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("db request error")
+		return "", err
+	}
+
+	defer func() {
+		_ = rows.Close()
+	}()
+
+	// пробегаем по всем записям
+	for rows.Next() {
+		var md MonitoringData
+		err = rows.Scan(&cowInfo.Summary.Name, &cowInfo.Summary.Breed, &cowInfo.Summary.BolusNum,
+			&cowInfo.Summary.DateOfBorn, &cowInfo.Summary.BolusType,
+			&cowInfo.Health.Estrus, &cowInfo.Health.Ill, &cowInfo.Health.UpdatedAt,
+			&md.AddedAt, &md.PH, &md.Temperature, &md.Movement, &md.Charge)
+		if err != nil {
+			logger.Wr.Warn().Err(err).Msg("get monitoring data instance error")
+			return "", err
+		}
+		cowInfo.History = append(cowInfo.History, md)
+	}
+
+	if err := rows.Err(); err != nil {
+		logger.Wr.Warn().Err(err).Msg("get cow info rows error")
+		return "", err
+	}
+
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("db request error")
+		return "", err
+	}
+
+	data, err := json.Marshal(cowInfo)
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("marshal to json error")
+		return "", err
+	}
+	return string(data), nil
 }
 
-func (s *DBStorage) GetCowInfo(c context.Context, cowID int) (string, error) {
-	return "", nil
+func (s *DBStorage) HasBolus(c context.Context, BolusNum int) int {
+	ctxIn, cancel := context.WithTimeout(c, time.Second)
+	defer cancel()
+
+	cowID := -1
+
+	sqlStr := fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1 LIMIT 1",
+		FCowID, TCow, FBolus)
+	row := s.db.QueryRowContext(ctxIn, sqlStr, BolusNum)
+	err := row.Scan(&cowID)
+
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("db request error")
+		return -1
+	}
+	return cowID
 }
 
 func (s *DBStorage) AddMonitoringData(c context.Context, data MonitoringData) error {
+	ctxIn, cancel := context.WithTimeout(c, time.Second)
+	defer cancel()
+
+	//добавление коровы
+	sqlStr := fmt.Sprintf("INSERT INTO %s (%s, %s, %s, %s, %s, %s) "+
+		"VALUES ($1, $2, $3, $4, $5, $6)",
+		TMonitoringData, FCowID, FAddedAt, FPH, FTemperature, FMovement, FCharge)
+
+	_, err := s.db.ExecContext(ctxIn, sqlStr, data.CowID, data.AddedAt, data.PH,
+		data.Temperature, data.Movement, data.Charge)
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("inserting monitoring data error")
+		return err
+	}
+	return nil
+}
+
+func (s *DBStorage) GetMonitoringData(c context.Context, cowID int, interval int) ([]MonitoringData, error) {
+	ctxIn, cancel := context.WithTimeout(c, time.Second)
+	defer cancel()
+
+	var res []MonitoringData
+	sqlStr := fmt.Sprintf("SELECT %s, %s, %s, %s FROM %s "+
+		"WHERE ((EXTRACT(EPOCH FROM now()) - "+
+		"EXTRACT(EPOCH FROM %s)) < $1) AND (%s = $2)",
+		FTemperature, FMovement, FPH, FAddedAt, TMonitoringData, FAddedAt, FCowID)
+
+	//now := time.Now()
+	min := 60
+	intervalInS := min * interval
+	rows, err := s.db.QueryContext(ctxIn, sqlStr, intervalInS, cowID)
+
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("db request error")
+		return res, err
+	}
+
+	defer func() {
+		_ = rows.Close()
+	}()
+
+	// пробегаем по всем записям
+	for rows.Next() {
+		var md MonitoringData
+		err = rows.Scan(&md.Temperature, &md.Movement, &md.PH, &md.AddedAt)
+		if err != nil {
+			logger.Wr.Warn().Err(err).Msg("get monitoring data instance error")
+			return nil, err
+		}
+		res = append(res, md)
+	}
+
+	if err := rows.Err(); err != nil {
+		logger.Wr.Warn().Err(err).Msg("get monitoring data rows error")
+		return nil, err
+	}
+
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("db request error")
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (s *DBStorage) UpdateHealth(c context.Context, data Health) error {
+	ctxIn, cancel := context.WithTimeout(c, time.Second)
+	defer cancel()
+
+	sqlStr := fmt.Sprintf("UPDATE %s SET %s = $1, %s = $2, %s = $3 WHERE %s = $4",
+		THealth, FUpdatedAt, FIll, FEstrus, FCowID)
+
+	_, err := s.db.ExecContext(ctxIn, sqlStr, data.UpdatedAt, data.Ill, data.Estrus, data.CowID)
+	if err != nil {
+		logger.Wr.Warn().Err(err).Msg("inserting health data error")
+		return err
+	}
 	return nil
 }
 
@@ -491,10 +648,9 @@ func (s *DBStorage) createTables(ctx context.Context) {
 
 	//4. health table
 	sqlStr = fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s "+
-		"(%s INTEGER UNIQUE PRIMARY KEY, %s TEXT, "+
-		"%s TEXT, %s TEXT, %s TIMESTAMP, "+
-		"%s BOOLEAN NOT NULL DEFAULT FALSE)",
-		THealth, FCowID, FDrink, FStress, FIll, FUpdatedAt, FDeleted)
+		"(%s INTEGER UNIQUE PRIMARY KEY, %s BOOLEAN, "+
+		"%s TEXT, %s TIMESTAMP with time zone, %s BOOLEAN NOT NULL DEFAULT FALSE)",
+		THealth, FCowID, FEstrus, FIll, FUpdatedAt, FDeleted)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
 		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", THealth)
@@ -504,7 +660,7 @@ func (s *DBStorage) createTables(ctx context.Context) {
 	//5. monitoring data table
 	sqlStr = fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s "+
 		"(%s serial UNIQUE PRIMARY KEY, %s INTEGER NOT NULL, "+
-		"%s timestamp, %s FLOAT, %s FLOAT, %s FLOAT, %s FLOAT)",
+		"%s TIMESTAMP with time zone, %s FLOAT, %s FLOAT, %s FLOAT, %s FLOAT)",
 		TMonitoringData, FMDID, FCowID, FAddedAt, FPH, FTemperature, FMovement, FCharge)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
@@ -517,7 +673,7 @@ func (s *DBStorage) createTables(ctx context.Context) {
 		"(%s serial UNIQUE PRIMARY KEY, %s TEXT NOT NULL, "+
 		"%s INTEGER NOT NULL, %s INTEGER NOT NULL, "+
 		"%s INTEGER UNIQUE NOT NULL, %s DATE NOT NULL, "+
-		"%s TIMESTAMP NOT NULL, %s bolus_type NOT NULL, "+
+		"%s TIMESTAMP with time zone NOT NULL, %s bolus_type NOT NULL, "+
 		"%s BOOLEAN NOT NULL DEFAULT FALSE)",
 		TCow, FCowID, FName, FBreedID, FFarmID, FBolus, FDateOfBorn, FAddedAt, FBolusType, FDeleted)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)

@@ -487,9 +487,13 @@ func TestBaseHandler_Logout(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-			//req, err := http.NewRequest("POST", "/api/user/logout", bytes.NewBuffer([]byte("")))
 			req, err := http.NewRequest("POST", "/api/user/logout", nil)
 			router.ServeHTTP(w, req)
+			defer func() {
+				if req.Body != nil {
+					req.Body.Close()
+				}
+			}()
 			assert.Nil(t, err)
 			assert.Equal(t, tt.want.code, w.Code)
 			assert.Equal(t, tt.want.cookie, w.Result().Cookies()[0].Value)
@@ -560,10 +564,16 @@ func TestBaseHandler_Register(t *testing.T) {
 			body := bytes.NewBuffer([]byte(tt.args))
 			req, err := http.NewRequest("POST", "/api/user/register", body)
 			router.ServeHTTP(w, req)
+			defer func() {
+				if req.Body != nil {
+					req.Body.Close()
+				}
+			}()
 			assert.Nil(t, err)
 			assert.Equal(t, tt.want.code, w.Code)
 			if w.Code == http.StatusOK {
 				assert.Equal(t, tt.want.cookie, w.Result().Cookies()[0].Value)
+
 			}
 		})
 	}

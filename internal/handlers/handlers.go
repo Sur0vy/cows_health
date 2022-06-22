@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -25,7 +26,6 @@ type Handle interface {
 	DelFarm(c *gin.Context)
 
 	GetCowBreeds(c *gin.Context)
-	GetFarmInfo(c *gin.Context)
 	GetCows(c *gin.Context)
 
 	AddCow(c *gin.Context)
@@ -241,9 +241,9 @@ func (h *BaseHandler) GetCows(c *gin.Context) {
 		return
 	}
 
-	farmIdStr := c.Param("id")
-	logger.Wr.Info().Msgf("farm ID: %s", farmIdStr)
-	farmID, err := strconv.Atoi(farmIdStr)
+	farmIDStr := c.Param("id")
+	logger.Wr.Info().Msgf("farm ID: %s", farmIDStr)
+	farmID, err := strconv.Atoi(farmIDStr)
 	if err != nil {
 		c.Writer.WriteHeader(http.StatusBadRequest)
 		return
@@ -268,81 +268,68 @@ func (h *BaseHandler) GetCows(c *gin.Context) {
 	c.String(http.StatusOK, cows)
 }
 
-func (h *BaseHandler) GetFarmInfo(c *gin.Context) {
-	//	c.Writer.Header().Set("Content-Type", "application/json")
-	//	farmIdStr := c.Param("id")
-	//	fmt.Printf("farm id = %s\n", farmIdStr)
-	//	farmID, err := strconv.Atoi(farmIdStr)
-	//	if err != nil {
-	//		c.Writer.WriteHeader(http.StatusInternalServerError)
-	//		return
-	//	}
-	//	var farmInfo string
-	//	farmInfo, err = h.storage.GetFarmInfo(c, farmID)
-	//	if err != nil {
-	//		switch err.(type) {
-	//		case *storage.EmptyError:
-	//			c.Writer.WriteHeader(http.StatusNoContent)
-	//			return
-	//		default:
-	//			c.Writer.WriteHeader(http.StatusInternalServerError)
-	//			return
-	//		}
-	//	} else {
-	//		c.String(http.StatusOK, farmInfo)
-	//	}
-}
-
 func (h *BaseHandler) GetCowInfo(c *gin.Context) {
-	//	c.Writer.Header().Set("Content-Type", "application/json")
-	//	cowIdStr := c.Param("id")
-	//	fmt.Printf("cow id = %s\n", cowIdStr)
-	//	cowID, err := strconv.Atoi(cowIdStr)
-	//	if err != nil {
-	//		c.Writer.WriteHeader(http.StatusInternalServerError)
-	//		return
-	//	}
-	//	var cowInfo string
-	//	cowInfo, err = h.storage.GetCowInfo(c, cowID)
-	//	if err != nil {
-	//		switch err.(type) {
-	//		case *storage.EmptyError:
-	//			c.Writer.WriteHeader(http.StatusNoContent)
-	//			return
-	//		default:
-	//			c.Writer.WriteHeader(http.StatusInternalServerError)
-	//			return
-	//		}
-	//	} else {
-	//		c.String(http.StatusOK, cowInfo)
-	//	}
+	c.Writer.Header().Set("Content-Type", "application/json")
+	cookie, _ := c.Cookie(config.Cookie)
+	logger.Wr.Info().Msgf("Get cows info user: %v", cookie)
+	u := h.storage.GetUser(c, cookie)
+	if u == nil {
+		logger.Wr.Info().Msg("Bad cookie or cookie not found")
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"Message": "Unauthorized"})
+		return
+	}
+
+	cowIDStr := c.Param("id")
+	logger.Wr.Info().Msgf("cow ID: %s", cowIDStr)
+	cowID, err := strconv.Atoi(cowIDStr)
+	if err != nil {
+		c.Writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var cow string
+	cow, err = h.storage.GetCowInfo(c, cowID)
+
+	if err != nil {
+		switch err.(type) {
+		case *storage.EmptyError:
+			logger.Wr.Warn().Msgf("Error with code: %v", http.StatusNoContent)
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		default:
+			logger.Wr.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+	}
+	logger.Wr.Info().Msg("Cow info for user getting success")
+	c.String(http.StatusOK, cow)
 }
 
 func (h *BaseHandler) AddMonitoringData(c *gin.Context) {
-	//	input, err := ioutil.ReadAll(c.Request.Body)
-	//	if err != nil {
-	//		c.Writer.WriteHeader(http.StatusBadRequest)
-	//		return
-	//	}
-	//	fmt.Println(string(input))
-	//	var monitoringData storage.MonitoringData
-	//	if err := json.Unmarshal(input, &monitoringData); err != nil {
-	//		c.Writer.WriteHeader(http.StatusBadRequest)
-	//		return
-	//	}
-	//
-	//	err = h.storage.AddMonitoringData(c, monitoringData)
-	//	if err != nil {
-	//		switch err.(type) {
-	//		case *storage.EmptyError:
-	//			c.Writer.WriteHeader(http.StatusConflict)
-	//			return
-	//		default:
-	//			c.Writer.WriteHeader(http.StatusInternalServerError)
-	//			return
-	//		}
-	//	}
-	//	c.Status(http.StatusCreated)
+	input, err := ioutil.ReadAll(c.Request.Body)
+	if err != nil {
+		logger.Wr.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	var data []storage.MonitoringData
+	if err := json.Unmarshal(input, &data); err != nil {
+		logger.Wr.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	logger.Wr.Info().Msg("Monitoring data will be added")
+	var wg sync.WaitGroup
+	for _, md := range data {
+		wg.Add(1)
+		storage.ProcessMonitoringData(c, &wg, h.storage, md)
+	}
+	wg.Wait()
+	logger.Wr.Info().Msg("All monitoring data was added")
+	c.Status(http.StatusAccepted)
 }
 
 func (h *BaseHandler) GetBolusesTypes(c *gin.Context) {

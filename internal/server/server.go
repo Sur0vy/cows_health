@@ -28,13 +28,12 @@ func SetupServer(s storage.Storage) *gin.Engine {
 	farms.GET("", handler.GetFarms)
 	farms.POST("", handler.AddFarm)
 	farms.DELETE("/:id", handler.DelFarm)
-	farms.GET("/:id/info", handler.GetFarmInfo)
 	farms.GET("/:id/cows", handler.GetCows)
 
 	boluses := api.Group("/boluses")
 	boluses.Use(CookieMidlewared(s))
 	boluses.GET("/types", handler.GetBolusesTypes)
-	boluses.POST("/data", handler.AddBolusData)
+	boluses.POST("/data", handler.AddMonitoringData)
 
 	cows := api.Group("/cows")
 	cows.Use(CookieMidlewared(s))
