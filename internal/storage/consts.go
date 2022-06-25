@@ -10,7 +10,6 @@ const (
 	TMonitoringData string = "monitoring_data"
 
 	//fields
-	FBreed   string = "breed"
 	FBreedID string = "breed_id"
 
 	FUserID   string = "user_id"
@@ -19,7 +18,7 @@ const (
 	FDeleted  string = "deleted"
 
 	FFarmID  string = "farm_id"
-	FAddress string = "farm_address"
+	FAddress string = "address"
 	FName    string = "name"
 
 	FCowID      string = "cow_id"

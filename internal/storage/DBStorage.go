@@ -196,7 +196,7 @@ func (s *DBStorage) GetCowBreeds(c context.Context) (string, error) {
 
 	var breeds []CowBreed
 	sqlStr := fmt.Sprintf("SELECT %s, %s FROM %s",
-		FBreedID, FBreed, TBreed)
+		FBreedID, FName, TBreed)
 	rows, err := s.db.QueryContext(ctxIn, sqlStr)
 
 	if err != nil {
@@ -342,7 +342,7 @@ func (s *DBStorage) GetCowInfo(c context.Context, cowID int) (string, error) {
 		"WHERE ((EXTRACT(EPOCH FROM now()) - "+
 		"EXTRACT(EPOCH FROM md.%s)) < $1) AND (md.%s = $2) "+
 		"ORDER BY c.%s ASC",
-		FName, FBreed, FBolus, FDateOfBorn,
+		FName, FName, FBolus, FDateOfBorn,
 		FBolusType, FEstrus, FIll, FUpdatedAt,
 		FAddedAt, FPH, FTemperature, FMovement, FCharge,
 		TCow,
@@ -630,7 +630,7 @@ func (s *DBStorage) createTables(ctx context.Context) {
 	//2. breed table
 	sqlStr = fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s "+
 		"(%s serial UNIQUE PRIMARY KEY, %s TEXT NOT NULL)",
-		TBreed, FBreedID, FBreed)
+		TBreed, FBreedID, FName)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
 		s.log.Panic().Err(err).Msgf("Fail then creating table %s", TBreed)

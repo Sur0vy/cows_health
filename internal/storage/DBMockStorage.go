@@ -39,7 +39,7 @@ func (s *DBStorage) createMockTables(ctx context.Context) {
 	//2. breed table
 	sqlStr = fmt.Sprintf("CREATE TABLE %s "+
 		"(%s INTEGER PRIMARY KEY AUTOINCREMENT, %s TEXT NOT NULL)",
-		TBreed, FBreedID, FBreed)
+		TBreed, FBreedID, FName)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
 		//logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TBreed)
@@ -111,7 +111,7 @@ func (s *DBStorage) createMockTables(ctx context.Context) {
 
 	//test data
 	sqlStr = fmt.Sprintf("INSERT INTO %s(%s) VALUES "+
-		"(?), (?), (?)", TBreed, FBreed)
+		"(?), (?), (?)", TBreed, FName)
 	_, err = s.db.ExecContext(ctxIn, sqlStr, "Голштинская", "Красная датская", "Айрширская")
 	if err != nil {
 		//logger.Wr.Panic().Err(err).Msgf("Fail to insert data into %s", TBreed)
