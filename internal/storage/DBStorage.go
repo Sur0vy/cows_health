@@ -31,7 +31,7 @@ func (s *DBStorage) AddUser(c context.Context, user User) (string, error) {
 	u := s.GetUser(c, userHash)
 	if u != nil {
 		logger.Wr.Warn().Msgf("User %v already exists", user.Login)
-		return userHash, NewExistError(fmt.Sprintf("user %s already exist", user.Login))
+		return userHash, NewExistError()
 	}
 
 	passwordHash, err := getCryptoPassword(user.Password)
@@ -77,13 +77,13 @@ func (s *DBStorage) GetUserHash(c context.Context, user User) (string, error) {
 	u := s.GetUser(c, userHash)
 	if u == nil {
 		logger.Wr.Warn().Msgf("User %v not exists", user.Login)
-		return "", NewEmptyError(fmt.Sprintf("user %s not exists", user.Login))
+		return "", NewEmptyError()
 	}
 
 	if checkPassword(u.Password, user.Password) {
 		return userHash, nil
 	}
-	return "", NewEmptyError(fmt.Sprintf("password wrong for user %s", user.Login))
+	return "", NewEmptyError()
 }
 
 func (s *DBStorage) GetFarms(c context.Context, userID int) (string, error) {
@@ -121,7 +121,7 @@ func (s *DBStorage) GetFarms(c context.Context, userID int) (string, error) {
 	}
 
 	if len(farms) == 0 {
-		return "", NewEmptyError("no farm for current user")
+		return "", NewEmptyError()
 	}
 	data, err := json.Marshal(&farms)
 	if err != nil {
@@ -143,7 +143,7 @@ func (s *DBStorage) AddFarm(c context.Context, farm Farm) error {
 
 	if err == nil {
 		logger.Wr.Info().Msg("farm already exist")
-		return NewExistError("farm already exist")
+		return NewExistError()
 	} else if err != sql.ErrNoRows {
 		logger.Wr.Warn().Err(err).Msg("db request error")
 		return err
@@ -180,7 +180,7 @@ func (s *DBStorage) DelFarm(c context.Context, userID int, farmID int) error {
 	}
 	if count == 0 {
 		logger.Wr.Info().Msgf("no farm with index %s", farmID)
-		return NewEmptyError("no farm for current user")
+		return NewEmptyError()
 	}
 
 	//TODO нужно обновлять таблицу коров, здоровья
@@ -222,7 +222,7 @@ func (s *DBStorage) GetCowBreeds(c context.Context) (string, error) {
 	}
 
 	if len(breeds) == 0 {
-		return "", NewEmptyError("no farm for current user")
+		return "", NewEmptyError()
 	}
 	data, err := json.Marshal(&breeds)
 	if err != nil {
@@ -270,7 +270,7 @@ func (s *DBStorage) GetCows(c context.Context, farmID int) (string, error) {
 	}
 
 	if len(cows) == 0 {
-		return "", NewEmptyError("no cows on farm")
+		return "", NewEmptyError()
 	}
 	data, err := json.Marshal(&cows)
 	if err != nil {
@@ -314,7 +314,7 @@ func (s *DBStorage) GetBolusesTypes(c context.Context) (string, error) {
 	}
 
 	if len(types) == 0 {
-		return "", NewEmptyError("no bolus types")
+		return "", NewEmptyError()
 	}
 	data, err := json.Marshal(&types)
 	if err != nil {
@@ -505,7 +505,7 @@ func (s *DBStorage) AddCow(c context.Context, cow Cow) error {
 
 	if err == nil {
 		logger.Wr.Info().Msg("duplicate bolus")
-		return NewExistError("duplicate bolus")
+		return NewExistError()
 	}
 
 	//добавление коровы
@@ -566,7 +566,7 @@ func (s *DBStorage) DeleteCows(c context.Context, CowIDs []int) error {
 	}
 	if count == 0 {
 		logger.Wr.Info().Msgf("no cows with indexes %v", CowIDs)
-		return NewEmptyError("no cows for current user")
+		return NewEmptyError()
 	}
 
 	//health
@@ -586,7 +586,7 @@ func (s *DBStorage) DeleteCows(c context.Context, CowIDs []int) error {
 	}
 	if count == 0 {
 		logger.Wr.Info().Msgf("no health with indexes %v", CowIDs)
-		return NewEmptyError("no health for current user")
+		return NewEmptyError()
 	}
 	return nil
 }

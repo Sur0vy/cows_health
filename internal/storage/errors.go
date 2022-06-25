@@ -8,9 +8,9 @@ type EmptyError struct {
 	message string
 }
 
-func NewExistError(msg string) *ExistError {
+func NewExistError() *ExistError {
 	return &ExistError{
-		message: msg,
+		message: "entry already exist",
 	}
 }
 
@@ -18,9 +18,9 @@ func (e *ExistError) Error() string {
 	return e.message
 }
 
-func NewEmptyError(msg string) *EmptyError {
+func NewEmptyError() *EmptyError {
 	return &EmptyError{
-		message: msg,
+		message: "entry is missing",
 	}
 }
 
