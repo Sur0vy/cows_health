@@ -1,25 +1,15 @@
 package storage
 
 import (
+	"context"
 	"time"
 )
-
-type User struct {
-	ID       int    `json:"-"`
-	Login    string `json:"login"`
-	Password string `json:"password"`
-}
 
 type Farm struct {
 	ID      int    `json:"farm_id"`
 	Name    string `json:"name"`
 	Address string `json:"address"`
 	UserID  int    `json:"-"`
-}
-
-type CowBreed struct {
-	ID    int    `json:"breed_id"`
-	Breed string `json:"breed"`
 }
 
 type Cow struct {
@@ -52,8 +42,29 @@ type Health struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type CowBreed struct {
+	ID    int    `json:"breed_id"`
+	Breed string `json:"breed"`
+}
+
 type CowInfo struct {
 	Health  Health           `json:"health"`
 	Summary Cow              `json:"summary"`
 	History []MonitoringData `json:"history"`
+}
+
+type FarmStorage interface {
+	GetFarms(с context.Context, userID int) (string, error)
+	AddFarm(с context.Context, farm Farm) error
+	DelFarm(с context.Context, userID int, farmID int) error
+	GetCows(c context.Context, farmID int) (string, error)
+	AddCow(c context.Context, cow Cow) error
+	DeleteCows(c context.Context, CowIDs []int) error
+	UpdateHealth(c context.Context, data Health) error
+	GetCowInfo(c context.Context, farmID int) (string, error)
+	GetCowBreeds(c context.Context) (string, error)
+	HasBolus(c context.Context, BolusNum int) int
+	GetBolusesTypes(c context.Context) (string, error)
+	AddMonitoringData(c context.Context, data MonitoringData) error
+	GetMonitoringData(c context.Context, cowID int, interval int) ([]MonitoringData, error)
 }

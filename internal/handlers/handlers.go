@@ -39,14 +39,16 @@ type Handle interface {
 }
 
 type BaseHandler struct {
-	log     *logger.Logger
-	storage storage.Storage
+	log         *logger.Logger
+	userStorage storage.UserStorage
+	farmStorage storage.FarmStorage
 }
 
-func NewBaseHandler(s storage.Storage, log *logger.Logger) Handle {
+func NewBaseHandler(us storage.UserStorage, ds storage.FarmStorage, log *logger.Logger) Handle {
 	return &BaseHandler{
-		log:     log,
-		storage: s,
+		log:         log,
+		userStorage: us,
+		farmStorage: ds,
 	}
 }
 
@@ -70,7 +72,7 @@ func (h *BaseHandler) Login(c *gin.Context) {
 	}
 
 	var cookie string
-	cookie, err = h.storage.GetUserHash(c, user)
+	cookie, err = h.userStorage.GetUserHash(c, user)
 	if err != nil {
 		switch err.(type) {
 		case *storage.EmptyError:
@@ -111,8 +113,7 @@ func (h *BaseHandler) Register(c *gin.Context) {
 		c.Writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	var cookie string
-	cookie, err = h.storage.AddUser(c, user)
+	err = h.userStorage.AddUser(c, user)
 	if err != nil {
 		switch err.(type) {
 		case *storage.ExistError:
@@ -125,6 +126,21 @@ func (h *BaseHandler) Register(c *gin.Context) {
 			return
 		}
 	}
+	var cookie string
+	cookie, err = h.userStorage.GetUserHash(c, user)
+	if err != nil {
+		switch err.(type) {
+		case *storage.EmptyError:
+			c.Writer.WriteHeader(http.StatusUnauthorized)
+			h.log.Warn().Msgf("Error with code: %v", http.StatusUnauthorized)
+			return
+		default:
+			c.Writer.WriteHeader(http.StatusInternalServerError)
+			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
+			return
+		}
+	}
+
 	c.SetCookie(config.Cookie, cookie, 3600, "/", "", false, true)
 	c.Writer.WriteHeader(http.StatusOK)
 }
@@ -133,13 +149,13 @@ func (h *BaseHandler) GetFarms(c *gin.Context) {
 	c.Writer.Header().Set("Content-Type", "application/json")
 	cookie, _ := c.Cookie(config.Cookie)
 	h.log.Info().Msgf("Get farms for user: %v", cookie)
-	u := h.storage.GetUser(c, cookie)
+	u := h.userStorage.GetUser(c, cookie)
 	if u == nil {
 		h.log.Info().Msg("Bad cookie or cookie not found")
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"Message": "Unauthorized"})
 		return
 	}
-	farms, err := h.storage.GetFarms(c, u.ID)
+	farms, err := h.farmStorage.GetFarms(c, u.ID)
 
 	if err != nil {
 		switch err.(type) {
@@ -160,7 +176,7 @@ func (h *BaseHandler) GetFarms(c *gin.Context) {
 func (h *BaseHandler) AddFarm(c *gin.Context) {
 	cookie, _ := c.Cookie(config.Cookie)
 	h.log.Info().Msgf("Add farm for user: %v", cookie)
-	u := h.storage.GetUser(c, cookie)
+	u := h.userStorage.GetUser(c, cookie)
 	if u == nil {
 		h.log.Info().Msg("Bad cookie or cookie not found")
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"Message": "Unauthorized"})
@@ -181,7 +197,7 @@ func (h *BaseHandler) AddFarm(c *gin.Context) {
 	}
 
 	farm.UserID = u.ID
-	err = h.storage.AddFarm(c, farm)
+	err = h.farmStorage.AddFarm(c, farm)
 
 	if err != nil {
 		switch err.(type) {
@@ -202,7 +218,7 @@ func (h *BaseHandler) AddFarm(c *gin.Context) {
 func (h *BaseHandler) DelFarm(c *gin.Context) {
 	cookie, _ := c.Cookie(config.Cookie)
 	h.log.Info().Msgf("Delete farm for user: %v", cookie)
-	u := h.storage.GetUser(c, cookie)
+	u := h.userStorage.GetUser(c, cookie)
 	if u == nil {
 		h.log.Info().Msg("Bad cookie or cookie not found")
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"Message": "Unauthorized"})
@@ -215,7 +231,7 @@ func (h *BaseHandler) DelFarm(c *gin.Context) {
 		return
 	}
 	h.log.Info().Msgf("Delete farm with index: %v", farmID)
-	err = h.storage.DelFarm(c, u.ID, farmID)
+	err = h.farmStorage.DelFarm(c, u.ID, farmID)
 	if err != nil {
 		switch err.(type) {
 		case *storage.EmptyError:
@@ -236,7 +252,7 @@ func (h *BaseHandler) GetCows(c *gin.Context) {
 	c.Writer.Header().Set("Content-Type", "application/json")
 	cookie, _ := c.Cookie(config.Cookie)
 	h.log.Info().Msgf("Get cows for user: %v", cookie)
-	u := h.storage.GetUser(c, cookie)
+	u := h.userStorage.GetUser(c, cookie)
 	if u == nil {
 		h.log.Info().Msg("Bad cookie or cookie not found")
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"Message": "Unauthorized"})
@@ -252,7 +268,7 @@ func (h *BaseHandler) GetCows(c *gin.Context) {
 	}
 
 	var cows string
-	cows, err = h.storage.GetCows(c, farmID)
+	cows, err = h.farmStorage.GetCows(c, farmID)
 
 	if err != nil {
 		switch err.(type) {
@@ -274,7 +290,7 @@ func (h *BaseHandler) GetCowInfo(c *gin.Context) {
 	c.Writer.Header().Set("Content-Type", "application/json")
 	cookie, _ := c.Cookie(config.Cookie)
 	h.log.Info().Msgf("Get cows info user: %v", cookie)
-	u := h.storage.GetUser(c, cookie)
+	u := h.userStorage.GetUser(c, cookie)
 	if u == nil {
 		h.log.Info().Msg("Bad cookie or cookie not found")
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"Message": "Unauthorized"})
@@ -290,7 +306,7 @@ func (h *BaseHandler) GetCowInfo(c *gin.Context) {
 	}
 
 	var cow string
-	cow, err = h.storage.GetCowInfo(c, cowID)
+	cow, err = h.farmStorage.GetCowInfo(c, cowID)
 
 	if err != nil {
 		switch err.(type) {
@@ -327,7 +343,8 @@ func (h *BaseHandler) AddMonitoringData(c *gin.Context) {
 	var wg sync.WaitGroup
 	for _, md := range data {
 		wg.Add(1)
-		storage.ProcessMonitoringData(c, &wg, h.storage, md, h.log)
+		dp := storage.NewDataProcessor(h.farmStorage, h.log)
+		dp.Run(c, md, &wg)
 	}
 	wg.Wait()
 	h.log.Info().Msg("All monitoring data was added")
@@ -338,14 +355,14 @@ func (h *BaseHandler) GetBolusesTypes(c *gin.Context) {
 	c.Writer.Header().Set("Content-Type", "application/json")
 	cookie, _ := c.Cookie(config.Cookie)
 	h.log.Info().Msgf("Get bolus types ", cookie)
-	u := h.storage.GetUser(c, cookie)
+	u := h.userStorage.GetUser(c, cookie)
 	if u == nil {
 		h.log.Info().Msg("Bad cookie or cookie not found")
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"Message": "Unauthorized"})
 		return
 	}
 
-	types, err := h.storage.GetBolusesTypes(c)
+	types, err := h.farmStorage.GetBolusesTypes(c)
 	if err != nil {
 		switch err.(type) {
 		case *storage.EmptyError:
@@ -366,13 +383,13 @@ func (h *BaseHandler) GetCowBreeds(c *gin.Context) {
 	c.Writer.Header().Set("Content-Type", "application/json")
 	cookie, _ := c.Cookie(config.Cookie)
 	h.log.Info().Msgf("Get cows breeds", cookie)
-	u := h.storage.GetUser(c, cookie)
+	u := h.userStorage.GetUser(c, cookie)
 	if u == nil {
 		h.log.Info().Msg("Bad cookie or cookie not found")
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"Message": "Unauthorized"})
 		return
 	}
-	breeds, err := h.storage.GetCowBreeds(c)
+	breeds, err := h.farmStorage.GetCowBreeds(c)
 	if err != nil {
 		switch err.(type) {
 		case *storage.EmptyError:
@@ -392,7 +409,7 @@ func (h *BaseHandler) GetCowBreeds(c *gin.Context) {
 func (h *BaseHandler) AddCow(c *gin.Context) {
 	cookie, _ := c.Cookie(config.Cookie)
 	h.log.Info().Msgf("Add cow for user: %v", cookie)
-	u := h.storage.GetUser(c, cookie)
+	u := h.userStorage.GetUser(c, cookie)
 	if u == nil {
 		h.log.Info().Msg("Bad cookie or cookie not found")
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"Message": "Unauthorized"})
@@ -414,7 +431,7 @@ func (h *BaseHandler) AddCow(c *gin.Context) {
 
 	cow.AddedAt = time.Now()
 	//добавим в таблицу коров
-	err = h.storage.AddCow(c, cow)
+	err = h.farmStorage.AddCow(c, cow)
 	if err != nil {
 		switch err.(type) {
 		case *storage.ExistError:
@@ -434,7 +451,7 @@ func (h *BaseHandler) AddCow(c *gin.Context) {
 func (h *BaseHandler) DelCows(c *gin.Context) {
 	cookie, _ := c.Cookie(config.Cookie)
 	h.log.Info().Msgf("Delete cows for user: %v", cookie)
-	u := h.storage.GetUser(c, cookie)
+	u := h.userStorage.GetUser(c, cookie)
 	if u == nil {
 		h.log.Info().Msg("Bad cookie or cookie not found")
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"Message": "Unauthorized"})
@@ -447,7 +464,7 @@ func (h *BaseHandler) DelCows(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	err = h.storage.DeleteCows(c, IDs)
+	err = h.farmStorage.DeleteCows(c, IDs)
 	if err != nil {
 		switch err.(type) {
 		case *storage.EmptyError:

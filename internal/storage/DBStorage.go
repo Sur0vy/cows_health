@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/Sur0vy/cows_health.git/internal/helpers"
 	"strconv"
 	"strings"
 	"time"
@@ -29,18 +30,18 @@ func NewDBStorage(ctx context.Context, DSN string, log *logger.Logger) *DBStorag
 	return s
 }
 
-func (s *DBStorage) AddUser(c context.Context, user User) (string, error) {
-	userHash := getMD5Hash(user.Login)
+func (s *DBStorage) AddUser(c context.Context, user User) error {
+	userHash := helpers.GetMD5Hash(user.Login)
 	u := s.GetUser(c, userHash)
 	if u != nil {
 		s.log.Warn().Msgf("User %v already exists", user.Login)
-		return userHash, NewExistError()
+		return NewExistError()
 	}
 
-	passwordHash, err := getCryptoPassword(user.Password)
+	passwordHash, err := helpers.GetCryptoPassword(user.Password)
 	if err != nil {
 		s.log.Warn().Msg("Error than encrypting password")
-		return "", err
+		return err
 	}
 
 	ctxIn, cancel := context.WithTimeout(c, 10*time.Second)
@@ -52,9 +53,9 @@ func (s *DBStorage) AddUser(c context.Context, user User) (string, error) {
 	_, err = s.db.ExecContext(ctxIn, sqlStr, userHash, passwordHash)
 	if err != nil {
 		s.log.Warn().Err(err).Msg("db request error")
-		return "", err
+		return err
 	}
-	return userHash, nil
+	return nil
 }
 
 func (s *DBStorage) GetUser(c context.Context, userHash string) *User {
@@ -76,14 +77,14 @@ func (s *DBStorage) GetUser(c context.Context, userHash string) *User {
 }
 
 func (s *DBStorage) GetUserHash(c context.Context, user User) (string, error) {
-	userHash := getMD5Hash(user.Login)
+	userHash := helpers.GetMD5Hash(user.Login)
 	u := s.GetUser(c, userHash)
 	if u == nil {
 		s.log.Warn().Msgf("User %v not exists", user.Login)
 		return "", NewEmptyError()
 	}
 
-	if checkPassword(u.Password, user.Password) {
+	if helpers.CheckPassword(u.Password, user.Password) {
 		return userHash, nil
 	}
 	return "", NewEmptyError()

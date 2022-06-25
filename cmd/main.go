@@ -19,7 +19,7 @@ func main() {
 
 	ds := storage.NewDBStorage(context.Background(), cnf.DSN, log)
 
-	var err = server.SetupServer(ds, log).Run(cnf.ServerHostPort)
+	var err = server.SetupServer(ds, ds, log).Run(cnf.ServerHostPort)
 	if err == nil {
 		log.Panic().Err(err).Msg(err.Error())
 	}

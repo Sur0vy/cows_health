@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"github.com/rs/zerolog/log"
 	"math"
 	"sync"
 	"time"
@@ -9,73 +10,106 @@ import (
 	"github.com/Sur0vy/cows_health.git/internal/logger"
 )
 
-func ProcessMonitoringData(c context.Context, wg *sync.WaitGroup, s Storage, data MonitoringData, log *logger.Logger) {
+type monitoringData struct {
+	data        []MonitoringData
+	avgPH       float64
+	avgTemp     float64
+	avgMovement float64
+}
+
+type DataProcessor struct {
+	log         *logger.Logger
+	FarmStorage FarmStorage
+}
+
+func NewDataProcessor(cs FarmStorage, log *logger.Logger) *DataProcessor {
+	return &DataProcessor{
+		log:         log,
+		FarmStorage: cs,
+	}
+}
+
+func (dp *DataProcessor) Run(c context.Context, data MonitoringData, wg *sync.WaitGroup) {
 	defer wg.Done()
 	//запросим, есть ли болюс
-	cowID := s.HasBolus(c, data.BolusNum)
+	cowID := dp.FarmStorage.HasBolus(c, data.BolusNum)
 	if cowID != -1 {
 		data.CowID = cowID
-		//logger.Wr.Info().Msgf("cow id = %v", data.CowID)
+		log.Info().Msgf("cow id = %v", data.CowID)
 	} else {
 		log.Warn().Msgf("no cow data for bolus %v", data.BolusNum)
 		return
 	}
 	data.AddedAt = time.Now()
-	//запишем данные
-	if err := s.AddMonitoringData(c, data); err == nil {
-		log.Info().Msgf("monitoring data added success for %v", data.CowID)
-	} else {
-		log.Warn().Err(err).Msgf("adding monitoring data error %v", data.CowID)
+	//сохраним данные
+	if err := dp.saveMonitoringData(c, data); err != nil {
 		return
 	}
 	//запросим данные за последние 10 минут
+	mds, err := dp.getHealthData(c, data.CowID)
+	if err != nil {
+		return
+	}
+
+	//запустим алгоритмы определения здоровья
+	health := dp.calculateHealth(mds)
+
+	//сохраним данные
+	dp.saveHealthData(c, health)
+}
+
+func (dp *DataProcessor) getHealthData(c context.Context, cowID int) (monitoringData, error) {
 	var (
 		avgPH       float64
 		avgTemp     float64
 		avgMovement float64
 	)
-	mds, err := s.GetMonitoringData(c, data.CowID, 10)
+	var monitoringData monitoringData
+	mds, err := dp.FarmStorage.GetMonitoringData(c, cowID, 10)
 	if err != nil {
-		log.Info().Msgf("monitoring data get success for %v", data.CowID)
-		return
+		log.Info().Msgf("monitoring data get success for %v", cowID)
+		return monitoringData, err
 	} else {
-		log.Warn().Err(err).Msgf("getting monitoring data error %v", data.CowID)
+		log.Warn().Err(err).Msgf("getting monitoring data error %v", cowID)
 		for i, md := range mds {
+			monitoringData.data = append(monitoringData.data, md)
 			avgPH += md.PH
 			avgTemp += md.Temperature
 			avgMovement += md.Movement
 			log.Info().Msgf("%d = %v", i, md)
 		}
-		avgPH /= float64(len(mds))
-		avgTemp /= float64(len(mds))
-		avgMovement /= float64(len(mds))
+		monitoringData.avgPH = avgPH / float64(len(mds))
+		monitoringData.avgTemp = avgTemp / float64(len(mds))
+		monitoringData.avgMovement = avgMovement / float64(len(mds))
 	}
+	return monitoringData, nil
+}
 
+func (dp *DataProcessor) calculateHealth(mds monitoringData) Health {
 	//запустим алгоримт определения здоровья и половой активности
 	health := Health{
-		CowID:     cowID,
 		Estrus:    false,
 		Ill:       "",
 		UpdatedAt: time.Now(),
 	}
-	for _, md := range mds {
-		if (math.Abs(md.Movement-avgMovement)/md.Movement > 0.1) &&
-			(math.Abs(md.Temperature-avgTemp)/md.Temperature > 0.1) {
+	for _, md := range mds.data {
+		if (math.Abs(md.Movement-mds.avgMovement)/md.Movement > 0.1) &&
+			(math.Abs(md.Temperature-mds.avgTemp)/md.Temperature > 0.1) {
 			health.Estrus = true
 			break
 		}
 	}
-	for _, md := range mds {
-		if (math.Abs(avgMovement-md.Movement)/md.Movement > 0.2) &&
-			(math.Abs(md.Temperature-avgTemp)/md.Temperature > 0.1) &&
-			(avgPH > 6) {
+	for _, md := range mds.data {
+		if (math.Abs(mds.avgMovement-md.Movement)/md.Movement > 0.2) &&
+			(math.Abs(md.Temperature-mds.avgTemp)/md.Temperature > 0.1) &&
+			(mds.avgPH > 6) {
 			health.Ill = "Инфекционное заболевание"
 			break
 		}
 	}
 	flag := false
 	if health.Ill == "" {
-		for _, md := range mds {
+		for _, md := range mds.data {
 			if (md.Temperature < 40) || (md.Temperature > 41) ||
 				(md.PH > 5.5) {
 				flag = true
@@ -86,12 +120,25 @@ func ProcessMonitoringData(c context.Context, wg *sync.WaitGroup, s Storage, dat
 			health.Ill = "Нервное заболевание"
 		}
 	}
+	return health
+}
 
-	//запишем в состояние о корове
-	if err := s.UpdateHealth(c, health); err == nil {
-		log.Info().Msgf("health data added success for %v", data.CowID)
+func (dp *DataProcessor) saveHealthData(c context.Context, health Health) error {
+	var err error
+	if err := dp.FarmStorage.UpdateHealth(c, health); err == nil {
+		log.Info().Msgf("health data added success for %v", health.CowID)
 	} else {
-		log.Warn().Err(err).Msgf("adding health data error %v", data.CowID)
-		return
+		log.Warn().Err(err).Msgf("adding health data error %v", health.CowID)
 	}
+	return err
+}
+
+func (dp *DataProcessor) saveMonitoringData(c context.Context, data MonitoringData) error {
+	var err error
+	if err = dp.FarmStorage.AddMonitoringData(c, data); err == nil {
+		log.Info().Msgf("monitoring data added success for %v", data.CowID)
+	} else {
+		log.Warn().Err(err).Msgf("adding monitoring data error %v", data.CowID)
+	}
+	return err
 }

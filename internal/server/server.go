@@ -9,9 +9,9 @@ import (
 	"github.com/Sur0vy/cows_health.git/internal/storage"
 )
 
-func SetupServer(s storage.Storage, log *logger.Logger) *gin.Engine {
+func SetupServer(us storage.UserStorage, ds storage.FarmStorage, log *logger.Logger) *gin.Engine {
 
-	handler := handlers.NewBaseHandler(s, log)
+	handler := handlers.NewBaseHandler(us, ds, log)
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 
@@ -25,19 +25,19 @@ func SetupServer(s storage.Storage, log *logger.Logger) *gin.Engine {
 	user.POST("/logout", handler.Logout)
 
 	farms := api.Group("/farms")
-	farms.Use(CookieMidlewared(s))
+	farms.Use(CookieMidlewared(us))
 	farms.GET("", handler.GetFarms)
 	farms.POST("", handler.AddFarm)
 	farms.DELETE("/:id", handler.DelFarm)
 	farms.GET("/:id/cows", handler.GetCows)
 
 	boluses := api.Group("/boluses")
-	boluses.Use(CookieMidlewared(s))
+	boluses.Use(CookieMidlewared(us))
 	boluses.GET("/types", handler.GetBolusesTypes)
 	boluses.POST("/data", handler.AddMonitoringData)
 
 	cows := api.Group("/cows")
-	cows.Use(CookieMidlewared(s))
+	cows.Use(CookieMidlewared(us))
 	cows.GET("/breeds", handler.GetCowBreeds)
 	cows.POST("", handler.AddCow)
 	cows.DELETE("", handler.DelCows)

@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"github.com/Sur0vy/cows_health.git/internal/helpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -35,7 +36,7 @@ func Test_checkPassword(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := checkPassword(tt.args.hash, tt.args.password); got != tt.want {
+			if got := helpers.checkPassword(tt.args.hash, tt.args.password); got != tt.want {
 				assert.Equal(t, got, tt.want)
 			}
 		})
@@ -72,9 +73,9 @@ func Test_getCryptoPassword(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			hash, err := getCryptoPassword(tt.args.password)
+			hash, err := helpers.getCryptoPassword(tt.args.password)
 			if !tt.wantErr {
-				res := checkPassword(hash, tt.args.passwordCh)
+				res := helpers.checkPassword(hash, tt.args.passwordCh)
 				assert.Equal(t, res, tt.want)
 				require.NoError(t, err)
 				return
@@ -105,7 +106,7 @@ func Test_getMD5Hash(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := getMD5Hash(tt.args)
+			got := helpers.getMD5Hash(tt.args)
 			if !tt.wantErr {
 				assert.Equal(t, got, tt.want)
 				return
