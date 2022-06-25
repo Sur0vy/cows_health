@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
-
-	"github.com/Sur0vy/cows_health.git/internal/logger"
 )
 
 func NewDBMockStorage(ctx context.Context) *DBStorage {
@@ -34,9 +32,9 @@ func (s *DBStorage) createMockTables(ctx context.Context) {
 		TUser, FUserID, FLogin, FPassword)
 	_, err := s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
-		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TUser)
+		//logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TUser)
 	}
-	logger.Wr.Info().Msgf("Table created: %s", TUser)
+	//logger.Wr.Info().Msgf("Table created: %s", TUser)
 
 	//2. breed table
 	sqlStr = fmt.Sprintf("CREATE TABLE %s "+
@@ -44,9 +42,9 @@ func (s *DBStorage) createMockTables(ctx context.Context) {
 		TBreed, FBreedID, FBreed)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
-		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TBreed)
+		//logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TBreed)
 	}
-	logger.Wr.Info().Msgf("Table created: %s", TBreed)
+	//logger.Wr.Info().Msgf("Table created: %s", TBreed)
 
 	//3. farm table
 	sqlStr = fmt.Sprintf("CREATE TABLE %s "+
@@ -58,9 +56,9 @@ func (s *DBStorage) createMockTables(ctx context.Context) {
 		FUserID, TUser, FUserID)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
-		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TFarm)
+		//logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TFarm)
 	}
-	logger.Wr.Info().Msgf("Table created: %s", TFarm)
+	//logger.Wr.Info().Msgf("Table created: %s", TFarm)
 
 	//4. cow table (проверить, есть ли тип такой)
 	sqlStr = fmt.Sprintf("CREATE TABLE %s "+
@@ -80,9 +78,9 @@ func (s *DBStorage) createMockTables(ctx context.Context) {
 		FFarmID, TFarm, FFarmID)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
-		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TCow)
+		//logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TCow)
 	}
-	logger.Wr.Info().Msgf("Table created: %s", TCow)
+	//logger.Wr.Info().Msgf("Table created: %s", TCow)
 
 	//5. health table
 	sqlStr = fmt.Sprintf("CREATE TABLE %s "+
@@ -94,9 +92,9 @@ func (s *DBStorage) createMockTables(ctx context.Context) {
 		FCowID, TCow, FCowID)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
-		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", THealth)
+		//logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", THealth)
 	}
-	logger.Wr.Info().Msgf("Table created: %s", THealth)
+	//logger.Wr.Info().Msgf("Table created: %s", THealth)
 
 	//6. monitoring data table
 	sqlStr = fmt.Sprintf("CREATE TABLE %s "+
@@ -107,18 +105,18 @@ func (s *DBStorage) createMockTables(ctx context.Context) {
 		FCowID, TCow, FCowID)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
-		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TMonitoringData)
+		//logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TMonitoringData)
 	}
-	logger.Wr.Info().Msgf("Table created: %s", TMonitoringData)
+	//logger.Wr.Info().Msgf("Table created: %s", TMonitoringData)
 
 	//test data
 	sqlStr = fmt.Sprintf("INSERT INTO %s(%s) VALUES "+
 		"(?), (?), (?)", TBreed, FBreed)
 	_, err = s.db.ExecContext(ctxIn, sqlStr, "Голштинская", "Красная датская", "Айрширская")
 	if err != nil {
-		logger.Wr.Panic().Err(err).Msgf("Fail to insert data into %s", TBreed)
+		//logger.Wr.Panic().Err(err).Msgf("Fail to insert data into %s", TBreed)
 	}
-	logger.Wr.Info().Msgf("data inserted into %s", TBreed)
+	//logger.Wr.Info().Msgf("data inserted into %s", TBreed)
 }
 
 //TODO внешние ключи

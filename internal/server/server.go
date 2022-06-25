@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/Sur0vy/cows_health.git/internal/logger"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 
@@ -8,9 +9,9 @@ import (
 	"github.com/Sur0vy/cows_health.git/internal/storage"
 )
 
-func SetupServer(s storage.Storage) *gin.Engine {
+func SetupServer(s storage.Storage, log *logger.Logger) *gin.Engine {
 
-	handler := handlers.NewBaseHandler(s)
+	handler := handlers.NewBaseHandler(s, log)
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 
@@ -41,8 +42,6 @@ func SetupServer(s storage.Storage) *gin.Engine {
 	cows.POST("", handler.AddCow)
 	cows.DELETE("", handler.DelCows)
 	cows.GET(":id/info", handler.GetCowInfo)
-
-	//router.GET("/ping", handler.Ping)
 
 	router.NoRoute(handler.ResponseBadRequest)
 	return router

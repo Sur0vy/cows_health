@@ -25,8 +25,6 @@ func LogFile(fileName string) option {
 	}
 }
 
-var Wr *Logger
-
 type Logger struct {
 	logger   *zerolog.Logger
 	logFile  string

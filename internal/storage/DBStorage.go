@@ -16,11 +16,14 @@ import (
 )
 
 type DBStorage struct {
-	db *sql.DB
+	log *logger.Logger
+	db  *sql.DB
 }
 
-func NewDBStorage(ctx context.Context, DSN string) *DBStorage {
-	s := &DBStorage{}
+func NewDBStorage(ctx context.Context, DSN string, log *logger.Logger) *DBStorage {
+	s := &DBStorage{
+		log: log,
+	}
 	s.connect(DSN)
 	s.createTables(ctx)
 	return s
@@ -30,13 +33,13 @@ func (s *DBStorage) AddUser(c context.Context, user User) (string, error) {
 	userHash := getMD5Hash(user.Login)
 	u := s.GetUser(c, userHash)
 	if u != nil {
-		logger.Wr.Warn().Msgf("User %v already exists", user.Login)
+		s.log.Warn().Msgf("User %v already exists", user.Login)
 		return userHash, NewExistError()
 	}
 
 	passwordHash, err := getCryptoPassword(user.Password)
 	if err != nil {
-		logger.Wr.Warn().Msg("Error than encrypting password")
+		s.log.Warn().Msg("Error than encrypting password")
 		return "", err
 	}
 
@@ -48,7 +51,7 @@ func (s *DBStorage) AddUser(c context.Context, user User) (string, error) {
 		TUser, FLogin, FPassword)
 	_, err = s.db.ExecContext(ctxIn, sqlStr, userHash, passwordHash)
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("db request error")
+		s.log.Warn().Err(err).Msg("db request error")
 		return "", err
 	}
 	return userHash, nil
@@ -66,7 +69,7 @@ func (s *DBStorage) GetUser(c context.Context, userHash string) *User {
 	err := row.Scan(&user.ID, &user.Password)
 
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("db request error")
+		s.log.Warn().Err(err).Msg("db request error")
 		return nil
 	}
 	return user
@@ -76,7 +79,7 @@ func (s *DBStorage) GetUserHash(c context.Context, user User) (string, error) {
 	userHash := getMD5Hash(user.Login)
 	u := s.GetUser(c, userHash)
 	if u == nil {
-		logger.Wr.Warn().Msgf("User %v not exists", user.Login)
+		s.log.Warn().Msgf("User %v not exists", user.Login)
 		return "", NewEmptyError()
 	}
 
@@ -96,7 +99,7 @@ func (s *DBStorage) GetFarms(c context.Context, userID int) (string, error) {
 	rows, err := s.db.QueryContext(ctxIn, sqlStr, userID)
 
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("db request error")
+		s.log.Warn().Err(err).Msg("db request error")
 		return "", err
 	}
 
@@ -109,14 +112,14 @@ func (s *DBStorage) GetFarms(c context.Context, userID int) (string, error) {
 		var farm Farm
 		err = rows.Scan(&farm.ID, &farm.Name, &farm.Address)
 		if err != nil {
-			logger.Wr.Warn().Err(err).Msg("get farm instance error")
+			s.log.Warn().Err(err).Msg("get farm instance error")
 			return "", err
 		}
 		farms = append(farms, farm)
 	}
 
 	if err := rows.Err(); err != nil {
-		logger.Wr.Warn().Err(err).Msg("get farm rows error")
+		s.log.Warn().Err(err).Msg("get farm rows error")
 		return "", err
 	}
 
@@ -125,7 +128,7 @@ func (s *DBStorage) GetFarms(c context.Context, userID int) (string, error) {
 	}
 	data, err := json.Marshal(&farms)
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("marshal to json error")
+		s.log.Warn().Err(err).Msg("marshal to json error")
 		return "", err
 	}
 	return string(data), nil
@@ -142,10 +145,10 @@ func (s *DBStorage) AddFarm(c context.Context, farm Farm) error {
 	err := row.Scan(&userID)
 
 	if err == nil {
-		logger.Wr.Info().Msg("farm already exist")
+		s.log.Info().Msg("farm already exist")
 		return NewExistError()
 	} else if err != sql.ErrNoRows {
-		logger.Wr.Warn().Err(err).Msg("db request error")
+		s.log.Warn().Err(err).Msg("db request error")
 		return err
 	}
 
@@ -154,7 +157,7 @@ func (s *DBStorage) AddFarm(c context.Context, farm Farm) error {
 		TFarm, FName, FAddress, FUserID)
 	_, err = s.db.ExecContext(ctxIn, sqlStr, farm.Name, farm.Address, farm.UserID)
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("inserting farm error")
+		s.log.Warn().Err(err).Msg("inserting farm error")
 		return err
 	}
 	return nil
@@ -170,16 +173,16 @@ func (s *DBStorage) DelFarm(c context.Context, userID int, farmID int) error {
 
 	res, err := s.db.ExecContext(ctxIn, sqlStr, userID, farmID)
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("db request error")
+		s.log.Warn().Err(err).Msg("db request error")
 		return err
 	}
 	count, err := res.RowsAffected()
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("db request error")
+		s.log.Warn().Err(err).Msg("db request error")
 		return err
 	}
 	if count == 0 {
-		logger.Wr.Info().Msgf("no farm with index %s", farmID)
+		s.log.Info().Msgf("no farm with index %s", farmID)
 		return NewEmptyError()
 	}
 
@@ -197,7 +200,7 @@ func (s *DBStorage) GetCowBreeds(c context.Context) (string, error) {
 	rows, err := s.db.QueryContext(ctxIn, sqlStr)
 
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("db request error")
+		s.log.Warn().Err(err).Msg("db request error")
 		return "", err
 	}
 
@@ -210,14 +213,14 @@ func (s *DBStorage) GetCowBreeds(c context.Context) (string, error) {
 		var breed CowBreed
 		err = rows.Scan(&breed.ID, &breed.Breed)
 		if err != nil {
-			logger.Wr.Warn().Err(err).Msg("get breed instance error")
+			s.log.Warn().Err(err).Msg("get breed instance error")
 			return "", err
 		}
 		breeds = append(breeds, breed)
 	}
 
 	if err := rows.Err(); err != nil {
-		logger.Wr.Warn().Err(err).Msg("get breed rows error")
+		s.log.Warn().Err(err).Msg("get breed rows error")
 		return "", err
 	}
 
@@ -226,7 +229,7 @@ func (s *DBStorage) GetCowBreeds(c context.Context) (string, error) {
 	}
 	data, err := json.Marshal(&breeds)
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("marshal to json error")
+		s.log.Warn().Err(err).Msg("marshal to json error")
 		return "", err
 	}
 	return string(data), nil
@@ -242,7 +245,7 @@ func (s *DBStorage) GetCows(c context.Context, farmID int) (string, error) {
 	rows, err := s.db.QueryContext(ctxIn, sqlStr, farmID)
 
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("db request error")
+		s.log.Warn().Err(err).Msg("db request error")
 		return "", err
 	}
 
@@ -257,7 +260,7 @@ func (s *DBStorage) GetCows(c context.Context, farmID int) (string, error) {
 		err = rows.Scan(&cow.ID, &cow.Name, &cow.BreedID, &cow.BolusNum,
 			&cow.DateOfBorn, &cow.AddedAt, &cow.BolusType)
 		if err != nil {
-			logger.Wr.Warn().Err(err).Msg("get cow instance error")
+			s.log.Warn().Err(err).Msg("get cow instance error")
 			return "", err
 		}
 		cow.FarmID = farmID
@@ -265,7 +268,7 @@ func (s *DBStorage) GetCows(c context.Context, farmID int) (string, error) {
 	}
 
 	if err := rows.Err(); err != nil {
-		logger.Wr.Warn().Err(err).Msg("get cow rows error")
+		s.log.Warn().Err(err).Msg("get cow rows error")
 		return "", err
 	}
 
@@ -274,7 +277,7 @@ func (s *DBStorage) GetCows(c context.Context, farmID int) (string, error) {
 	}
 	data, err := json.Marshal(&cows)
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("marshal to json error")
+		s.log.Warn().Err(err).Msg("marshal to json error")
 		return "", err
 	}
 	return string(data), nil
@@ -289,7 +292,7 @@ func (s *DBStorage) GetBolusesTypes(c context.Context) (string, error) {
 	rows, err := s.db.QueryContext(ctxIn, sqlStr)
 
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("db request error")
+		s.log.Warn().Err(err).Msg("db request error")
 		return "", err
 	}
 
@@ -302,14 +305,14 @@ func (s *DBStorage) GetBolusesTypes(c context.Context) (string, error) {
 		var bolusType string
 		err = rows.Scan(&bolusType)
 		if err != nil {
-			logger.Wr.Warn().Err(err).Msg("get bolus type error")
+			s.log.Warn().Err(err).Msg("get bolus type error")
 			return "", err
 		}
 		types = append(types, bolusType)
 	}
 
 	if err := rows.Err(); err != nil {
-		logger.Wr.Warn().Err(err).Msg("get bolus types rows error")
+		s.log.Warn().Err(err).Msg("get bolus types rows error")
 		return "", err
 	}
 
@@ -318,7 +321,7 @@ func (s *DBStorage) GetBolusesTypes(c context.Context) (string, error) {
 	}
 	data, err := json.Marshal(&types)
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("marshal to json error")
+		s.log.Warn().Err(err).Msg("marshal to json error")
 		return "", err
 	}
 	return string(data), nil
@@ -354,7 +357,7 @@ func (s *DBStorage) GetCowInfo(c context.Context, cowID int) (string, error) {
 	rows, err := s.db.QueryContext(ctxIn, sqlStr, intervalInS, cowID)
 
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("db request error")
+		s.log.Warn().Err(err).Msg("db request error")
 		return "", err
 	}
 
@@ -370,25 +373,25 @@ func (s *DBStorage) GetCowInfo(c context.Context, cowID int) (string, error) {
 			&cowInfo.Health.Estrus, &cowInfo.Health.Ill, &cowInfo.Health.UpdatedAt,
 			&md.AddedAt, &md.PH, &md.Temperature, &md.Movement, &md.Charge)
 		if err != nil {
-			logger.Wr.Warn().Err(err).Msg("get monitoring data instance error")
+			s.log.Warn().Err(err).Msg("get monitoring data instance error")
 			return "", err
 		}
 		cowInfo.History = append(cowInfo.History, md)
 	}
 
 	if err := rows.Err(); err != nil {
-		logger.Wr.Warn().Err(err).Msg("get cow info rows error")
+		s.log.Warn().Err(err).Msg("get cow info rows error")
 		return "", err
 	}
 
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("db request error")
+		s.log.Warn().Err(err).Msg("db request error")
 		return "", err
 	}
 
 	data, err := json.Marshal(cowInfo)
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("marshal to json error")
+		s.log.Warn().Err(err).Msg("marshal to json error")
 		return "", err
 	}
 	return string(data), nil
@@ -406,7 +409,7 @@ func (s *DBStorage) HasBolus(c context.Context, BolusNum int) int {
 	err := row.Scan(&cowID)
 
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("db request error")
+		s.log.Warn().Err(err).Msg("db request error")
 		return -1
 	}
 	return cowID
@@ -424,7 +427,7 @@ func (s *DBStorage) AddMonitoringData(c context.Context, data MonitoringData) er
 	_, err := s.db.ExecContext(ctxIn, sqlStr, data.CowID, data.AddedAt, data.PH,
 		data.Temperature, data.Movement, data.Charge)
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("inserting monitoring data error")
+		s.log.Warn().Err(err).Msg("inserting monitoring data error")
 		return err
 	}
 	return nil
@@ -446,7 +449,7 @@ func (s *DBStorage) GetMonitoringData(c context.Context, cowID int, interval int
 	rows, err := s.db.QueryContext(ctxIn, sqlStr, intervalInS, cowID)
 
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("db request error")
+		s.log.Warn().Err(err).Msg("db request error")
 		return res, err
 	}
 
@@ -459,19 +462,19 @@ func (s *DBStorage) GetMonitoringData(c context.Context, cowID int, interval int
 		var md MonitoringData
 		err = rows.Scan(&md.Temperature, &md.Movement, &md.PH, &md.AddedAt)
 		if err != nil {
-			logger.Wr.Warn().Err(err).Msg("get monitoring data instance error")
+			s.log.Warn().Err(err).Msg("get monitoring data instance error")
 			return nil, err
 		}
 		res = append(res, md)
 	}
 
 	if err := rows.Err(); err != nil {
-		logger.Wr.Warn().Err(err).Msg("get monitoring data rows error")
+		s.log.Warn().Err(err).Msg("get monitoring data rows error")
 		return nil, err
 	}
 
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("db request error")
+		s.log.Warn().Err(err).Msg("db request error")
 		return nil, err
 	}
 
@@ -487,7 +490,7 @@ func (s *DBStorage) UpdateHealth(c context.Context, data Health) error {
 
 	_, err := s.db.ExecContext(ctxIn, sqlStr, data.UpdatedAt, data.Ill, data.Estrus, data.CowID)
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("inserting health data error")
+		s.log.Warn().Err(err).Msg("inserting health data error")
 		return err
 	}
 	return nil
@@ -504,7 +507,7 @@ func (s *DBStorage) AddCow(c context.Context, cow Cow) error {
 	err := row.Scan(&bolusID)
 
 	if err == nil {
-		logger.Wr.Info().Msg("duplicate bolus")
+		s.log.Info().Msg("duplicate bolus")
 		return NewExistError()
 	}
 
@@ -519,7 +522,7 @@ func (s *DBStorage) AddCow(c context.Context, cow Cow) error {
 	err = row.Scan(&cow.ID)
 
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("db request error")
+		s.log.Warn().Err(err).Msg("db request error")
 		return err
 	}
 
@@ -528,7 +531,7 @@ func (s *DBStorage) AddCow(c context.Context, cow Cow) error {
 		THealth, FCowID)
 	_, err = s.db.ExecContext(ctxIn, sqlStr, cow.ID)
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("creating health record error")
+		s.log.Warn().Err(err).Msg("creating health record error")
 		return err
 	}
 	return nil
@@ -556,16 +559,16 @@ func (s *DBStorage) DeleteCows(c context.Context, CowIDs []int) error {
 
 	res, err := s.db.ExecContext(ctxIn, sqlStr, arr...)
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("db request error")
+		s.log.Warn().Err(err).Msg("db request error")
 		return err
 	}
 	count, err := res.RowsAffected()
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("db request error")
+		s.log.Warn().Err(err).Msg("db request error")
 		return err
 	}
 	if count == 0 {
-		logger.Wr.Info().Msgf("no cows with indexes %v", CowIDs)
+		s.log.Info().Msgf("no cows with indexes %v", CowIDs)
 		return NewEmptyError()
 	}
 
@@ -576,16 +579,16 @@ func (s *DBStorage) DeleteCows(c context.Context, CowIDs []int) error {
 
 	res, err = s.db.ExecContext(ctxIn, sqlStr, arr...)
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("db request error")
+		s.log.Warn().Err(err).Msg("db request error")
 		return err
 	}
 	count, err = res.RowsAffected()
 	if err != nil {
-		logger.Wr.Warn().Err(err).Msg("db request error")
+		s.log.Warn().Err(err).Msg("db request error")
 		return err
 	}
 	if count == 0 {
-		logger.Wr.Info().Msgf("no health with indexes %v", CowIDs)
+		s.log.Info().Msgf("no health with indexes %v", CowIDs)
 		return NewEmptyError()
 	}
 	return nil
@@ -610,9 +613,9 @@ func (s *DBStorage) createTables(ctx context.Context) {
 		"END IF; END$$")
 	_, err := s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
-		logger.Wr.Panic().Err(err).Msg("Fail then creating type bolus_type")
+		s.log.Panic().Err(err).Msg("Fail then creating type bolus_type")
 	}
-	logger.Wr.Info().Msg("Type created: bolus_type")
+	s.log.Info().Msg("Type created: bolus_type")
 
 	//1. user table
 	sqlStr = fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s "+
@@ -620,9 +623,9 @@ func (s *DBStorage) createTables(ctx context.Context) {
 		TUser, FUserID, FLogin, FPassword)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
-		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TUser)
+		s.log.Panic().Err(err).Msgf("Fail then creating table %s", TUser)
 	}
-	logger.Wr.Info().Msgf("Table created: %s", TUser)
+	s.log.Info().Msgf("Table created: %s", TUser)
 
 	//2. breed table
 	sqlStr = fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s "+
@@ -630,9 +633,9 @@ func (s *DBStorage) createTables(ctx context.Context) {
 		TBreed, FBreedID, FBreed)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
-		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TBreed)
+		s.log.Panic().Err(err).Msgf("Fail then creating table %s", TBreed)
 	}
-	logger.Wr.Info().Msgf("Table created: %s", TBreed)
+	s.log.Info().Msgf("Table created: %s", TBreed)
 
 	//3. farm table
 	sqlStr = fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s "+
@@ -642,9 +645,9 @@ func (s *DBStorage) createTables(ctx context.Context) {
 		TFarm, FFarmID, FName, FAddress, FUserID, FDeleted)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
-		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TFarm)
+		s.log.Panic().Err(err).Msgf("Fail then creating table %s", TFarm)
 	}
-	logger.Wr.Info().Msgf("Table created: %s", TFarm)
+	s.log.Info().Msgf("Table created: %s", TFarm)
 
 	//4. health table
 	sqlStr = fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s "+
@@ -653,9 +656,9 @@ func (s *DBStorage) createTables(ctx context.Context) {
 		THealth, FCowID, FEstrus, FIll, FUpdatedAt, FDeleted)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
-		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", THealth)
+		s.log.Panic().Err(err).Msgf("Fail then creating table %s", THealth)
 	}
-	logger.Wr.Info().Msgf("Table created: %s", THealth)
+	s.log.Info().Msgf("Table created: %s", THealth)
 
 	//5. monitoring data table
 	sqlStr = fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s "+
@@ -664,9 +667,9 @@ func (s *DBStorage) createTables(ctx context.Context) {
 		TMonitoringData, FMDID, FCowID, FAddedAt, FPH, FTemperature, FMovement, FCharge)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
-		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TMonitoringData)
+		s.log.Panic().Err(err).Msgf("Fail then creating table %s", TMonitoringData)
 	}
-	logger.Wr.Info().Msgf("Table created: %s", TMonitoringData)
+	s.log.Info().Msgf("Table created: %s", TMonitoringData)
 
 	//6. cow table (проверить, есть ли тип такой)
 	sqlStr = fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s "+
@@ -678,9 +681,9 @@ func (s *DBStorage) createTables(ctx context.Context) {
 		TCow, FCowID, FName, FBreedID, FFarmID, FBolus, FDateOfBorn, FAddedAt, FBolusType, FDeleted)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
-		logger.Wr.Panic().Err(err).Msgf("Fail then creating table %s", TCow)
+		s.log.Panic().Err(err).Msgf("Fail then creating table %s", TCow)
 	}
-	logger.Wr.Info().Msgf("Table created: %s", TCow)
+	s.log.Info().Msgf("Table created: %s", TCow)
 
 	//links
 	//user-farm link
@@ -689,9 +692,9 @@ func (s *DBStorage) createTables(ctx context.Context) {
 		TFarm, TFarm, FUserID, TUser, FUserID)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
-		logger.Wr.Panic().Err(err).Msgf("Fail then creating foreign key  %s <-> %s", TFarm, TUser)
+		s.log.Panic().Err(err).Msgf("Fail then creating foreign key  %s <-> %s", TFarm, TUser)
 	}
-	logger.Wr.Info().Msgf("foreign key created: %s <-> %s", TFarm, TUser)
+	s.log.Info().Msgf("foreign key created: %s <-> %s", TFarm, TUser)
 
 	//cow-breed link
 	sqlStr = fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT IF EXISTS fk_cow_breed; "+
@@ -699,9 +702,9 @@ func (s *DBStorage) createTables(ctx context.Context) {
 		TCow, TCow, FBreedID, TBreed, FBreedID)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
-		logger.Wr.Panic().Err(err).Msgf("Fail then creating foreign key  %s <-> %s", TCow, TBreed)
+		s.log.Panic().Err(err).Msgf("Fail then creating foreign key  %s <-> %s", TCow, TBreed)
 	}
-	logger.Wr.Info().Msgf("foreign key created: %s <-> %s", TCow, TBreed)
+	s.log.Info().Msgf("foreign key created: %s <-> %s", TCow, TBreed)
 
 	//cow-farm link
 	sqlStr = fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT IF EXISTS fk_cow_farm; "+
@@ -709,9 +712,9 @@ func (s *DBStorage) createTables(ctx context.Context) {
 		TCow, TCow, FFarmID, TFarm, FFarmID)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
-		logger.Wr.Panic().Err(err).Msgf("Fail then creating foreign key  %s <-> %s", TCow, TFarm)
+		s.log.Panic().Err(err).Msgf("Fail then creating foreign key  %s <-> %s", TCow, TFarm)
 	}
-	logger.Wr.Info().Msgf("foreign key created: %s <-> %s", TCow, TFarm)
+	s.log.Info().Msgf("foreign key created: %s <-> %s", TCow, TFarm)
 
 	//health-cow link
 	sqlStr = fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT IF EXISTS fk_cow_health; "+
@@ -719,9 +722,9 @@ func (s *DBStorage) createTables(ctx context.Context) {
 		THealth, THealth, FCowID, TCow, FCowID)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
-		logger.Wr.Panic().Err(err).Msgf("Fail then creating foreign key  %s <-> %s", THealth, TCow)
+		s.log.Panic().Err(err).Msgf("Fail then creating foreign key  %s <-> %s", THealth, TCow)
 	}
-	logger.Wr.Info().Msgf("foreign key created: %s <-> %s", THealth, TCow)
+	s.log.Info().Msgf("foreign key created: %s <-> %s", THealth, TCow)
 
 	//monitoring data-cow link
 	sqlStr = fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT IF EXISTS fk_cow_md; "+
@@ -729,9 +732,9 @@ func (s *DBStorage) createTables(ctx context.Context) {
 		TMonitoringData, TMonitoringData, FCowID, TCow, FCowID)
 	_, err = s.db.ExecContext(ctxIn, sqlStr)
 	if err != nil {
-		logger.Wr.Panic().Err(err).Msgf("Fail then creating foreign key  %s <-> %s", TMonitoringData, TCow)
+		s.log.Panic().Err(err).Msgf("Fail then creating foreign key  %s <-> %s", TMonitoringData, TCow)
 	}
-	logger.Wr.Info().Msgf("foreign key created: %s <-> %s", TMonitoringData, TCow)
+	s.log.Info().Msgf("foreign key created: %s <-> %s", TMonitoringData, TCow)
 }
 
 func (s *DBStorage) Ping() error {

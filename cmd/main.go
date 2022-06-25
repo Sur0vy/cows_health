@@ -11,16 +11,16 @@ import (
 
 func main() {
 	cnf := *config.Setup(config.LoadParams())
-	logger.Wr = logger.New(logger.IsDebug(cnf.IsDebug), logger.LogFile(cnf.LogFile))
-	logger.Wr.Info().Msgf("Server start: address: %s", cnf.ServerHostPort)
-	defer logger.Wr.Info().Msg("Server stop")
+	log := logger.New(logger.IsDebug(cnf.IsDebug), logger.LogFile(cnf.LogFile))
+	log.Info().Msgf("Server start: address: %s", cnf.ServerHostPort)
+	defer log.Info().Msg("Server stop")
 
-	logger.Wr.Info().Msgf("Load storage with parameters %s", cnf.DSN)
+	log.Info().Msgf("Load storage with parameters %s", cnf.DSN)
 
-	ds := storage.NewDBStorage(context.Background(), cnf.DSN)
+	ds := storage.NewDBStorage(context.Background(), cnf.DSN, log)
 
-	var err = server.SetupServer(ds).Run(cnf.ServerHostPort)
+	var err = server.SetupServer(ds, log).Run(cnf.ServerHostPort)
 	if err == nil {
-		logger.Wr.Panic().Err(err).Msg(err.Error())
+		log.Panic().Err(err).Msg(err.Error())
 	}
 }
