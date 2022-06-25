@@ -1,21 +1,22 @@
 package server
 
 import (
-	"github.com/Sur0vy/cows_health.git/internal/logger"
-	"github.com/gin-contrib/gzip"
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 
 	"github.com/Sur0vy/cows_health.git/internal/handlers"
+	"github.com/Sur0vy/cows_health.git/internal/logger"
 	"github.com/Sur0vy/cows_health.git/internal/storage"
 )
 
-func SetupServer(us storage.UserStorage, ds storage.FarmStorage, log *logger.Logger) *gin.Engine {
+func SetupServer(us storage.UserStorage, ds storage.FarmStorage, log *logger.Logger) *echo.Echo {
 
 	handler := handlers.NewBaseHandler(us, ds, log)
-	gin.SetMode(gin.ReleaseMode)
-	router := gin.Default()
+	router := echo.New()
 
-	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithDecompressFn(gzip.DefaultDecompressHandle)))
+	router.Use(middleware.Gzip())
+	
+	router.Any("/*", handler.ResponseBadRequest)
 
 	api := router.Group("/api")
 
@@ -24,25 +25,20 @@ func SetupServer(us storage.UserStorage, ds storage.FarmStorage, log *logger.Log
 	user.POST("/login", handler.Login)
 	user.POST("/logout", handler.Logout)
 
-	farms := api.Group("/farms")
-	farms.Use(CookieMidlewared(us))
+	farms := api.Group("/farms", AuthMiddleware(us))
 	farms.GET("", handler.GetFarms)
 	farms.POST("", handler.AddFarm)
 	farms.DELETE("/:id", handler.DelFarm)
 	farms.GET("/:id/cows", handler.GetCows)
 
-	boluses := api.Group("/boluses")
-	boluses.Use(CookieMidlewared(us))
+	boluses := api.Group("/boluses", AuthMiddleware(us))
 	boluses.GET("/types", handler.GetBolusesTypes)
 	boluses.POST("/data", handler.AddMonitoringData)
 
-	cows := api.Group("/cows")
-	cows.Use(CookieMidlewared(us))
+	cows := api.Group("/cows", AuthMiddleware(us))
 	cows.GET("/breeds", handler.GetCowBreeds)
 	cows.POST("", handler.AddCow)
 	cows.DELETE("", handler.DelCows)
 	cows.GET(":id/info", handler.GetCowInfo)
-
-	router.NoRoute(handler.ResponseBadRequest)
 	return router
 }
