@@ -90,7 +90,7 @@ func (s *DBStorage) GetUserHash(c context.Context, user User) (string, error) {
 	return "", NewEmptyError()
 }
 
-func (s *DBStorage) GetFarms(c context.Context, userID int) (string, error) {
+func (s *DBStorage) GetFarms(c context.Context, userID int) ([]Farm, error) {
 	ctxIn, cancel := context.WithTimeout(c, 5*time.Second)
 	defer cancel()
 
@@ -101,7 +101,7 @@ func (s *DBStorage) GetFarms(c context.Context, userID int) (string, error) {
 
 	if err != nil {
 		s.log.Warn().Err(err).Msg("db request error")
-		return "", err
+		return farms, err
 	}
 
 	defer func() {
@@ -114,25 +114,20 @@ func (s *DBStorage) GetFarms(c context.Context, userID int) (string, error) {
 		err = rows.Scan(&farm.ID, &farm.Name, &farm.Address)
 		if err != nil {
 			s.log.Warn().Err(err).Msg("get farm instance error")
-			return "", err
+			return farms, err
 		}
 		farms = append(farms, farm)
 	}
 
 	if err := rows.Err(); err != nil {
 		s.log.Warn().Err(err).Msg("get farm rows error")
-		return "", err
+		return farms, err
 	}
 
 	if len(farms) == 0 {
-		return "", NewEmptyError()
+		return farms, NewEmptyError()
 	}
-	data, err := json.Marshal(&farms)
-	if err != nil {
-		s.log.Warn().Err(err).Msg("marshal to json error")
-		return "", err
-	}
-	return string(data), nil
+	return farms, nil
 }
 
 func (s *DBStorage) AddFarm(c context.Context, farm Farm) error {

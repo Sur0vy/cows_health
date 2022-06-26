@@ -85,6 +85,7 @@ func (h *BaseHandler) Login(c echo.Context) error {
 	cookie := new(http.Cookie)
 	cookie.Name = config.Cookie
 	cookie.Value = hash
+	cookie.Path = "/"
 	cookie.Expires = time.Now().Add(24 * time.Hour)
 	c.SetCookie(cookie)
 
@@ -96,6 +97,7 @@ func (h *BaseHandler) Logout(c echo.Context) error {
 	cookie := new(http.Cookie)
 	cookie.Name = config.Cookie
 	cookie.Value = ""
+	cookie.Path = "/"
 	cookie.Expires = time.Time{}
 	c.SetCookie(cookie)
 	h.log.Info().Msg("logout success")
@@ -142,6 +144,7 @@ func (h *BaseHandler) Register(c echo.Context) error {
 	cookie := new(http.Cookie)
 	cookie.Name = config.Cookie
 	cookie.Value = hash
+	cookie.Path = "/"
 	cookie.Expires = time.Now().Add(24 * time.Hour)
 	c.SetCookie(cookie)
 

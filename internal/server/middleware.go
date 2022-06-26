@@ -20,8 +20,13 @@ func AuthMiddleware(s storage.UserStorage) echo.MiddlewareFunc {
 					return next(c)
 				}
 			}
-			c.JSON(http.StatusUnauthorized, "{\"Message\": \"Unauthorized\"}")
-			return next(c)
+			type Unauthorized struct {
+				Message string
+			}
+			msg := &Unauthorized{
+				Message: "Unauthorized",
+			}
+			return c.JSON(http.StatusUnauthorized, msg)
 		}
 	}
 }

@@ -54,7 +54,7 @@ type CowInfo struct {
 }
 
 type FarmStorage interface {
-	GetFarms(с context.Context, userID int) (string, error)
+	GetFarms(с context.Context, userID int) ([]Farm, error)
 	AddFarm(с context.Context, farm Farm) error
 	DelFarm(с context.Context, farmID int) error
 	GetCows(c context.Context, farmID int) (string, error)
