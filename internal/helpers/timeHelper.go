@@ -1,24 +1,50 @@
 package helpers
 
 import (
-	"math"
+	"fmt"
+	"time"
 )
 
-// RoundTime функцию надо переписать
-// она должна принимать duration  и возвразать
-// возраст в виде троки: "XX лет XX месяцев"
+// RoundTime возвращает форматированную строку
+// разницу в годах и месяцах между двумя датами
 
-func RoundTime(input float64) int {
-	var result float64
+func RoundTime(from, to time.Time) string {
+	if from.Location() != to.Location() {
+		to = to.In(from.Location())
+	}
+	if from.After(to) {
+		from, to = to, from
+	}
+	y1, M1, d1 := from.Date()
+	y2, M2, d2 := to.Date()
 
-	if input < 0 {
-		result = math.Ceil(input - 0.5)
-	} else {
-		result = math.Floor(input + 0.5)
+	year := int(y2 - y1)
+	month := int(M2 - M1)
+	day := int(d2 - d1)
+
+	if day < 0 {
+		month--
+	}
+	if month < 0 {
+		month += 12
+		year--
 	}
 
-	// only interested in integer, ignore fractional
-	i, _ := math.Modf(result)
+	var yearSuf string
 
-	return int(i)
+	sh := year % 10
+
+	if (year > 0 && year < 5) ||
+		(year > 20 && sh > 0 && sh < 5) {
+		yearSuf = "г"
+	} else {
+		yearSuf = "л"
+	}
+	if month == 0 {
+		return fmt.Sprintf("%d %s", year, yearSuf)
+	}
+	if year == 0 {
+		return fmt.Sprintf("%d мес", month)
+	}
+	return fmt.Sprintf("%d %s %d мес", year, yearSuf, month)
 }

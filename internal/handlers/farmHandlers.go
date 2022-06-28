@@ -16,11 +16,7 @@ import (
 	"github.com/Sur0vy/cows_health.git/internal/storage"
 )
 
-type Handle interface {
-	Login(c echo.Context) error
-	Logout(c echo.Context) error
-	Register(c echo.Context) error
-
+type FarmHandle interface {
 	GetFarms(c echo.Context) error
 	AddFarm(c echo.Context) error
 	DelFarm(c echo.Context) error
@@ -34,124 +30,22 @@ type Handle interface {
 
 	GetBolusesTypes(c echo.Context) error
 	AddMonitoringData(c echo.Context) error
-
-	ResponseBadRequest(c echo.Context) error
 }
 
-type BaseHandler struct {
+type FarmHandler struct {
 	log         *logger.Logger
 	userStorage storage.UserStorage
 	farmStorage storage.FarmStorage
 }
 
-func NewBaseHandler(us storage.UserStorage, ds storage.FarmStorage, log *logger.Logger) Handle {
-	return &BaseHandler{
+func NewFarmHandler(fs storage.FarmStorage, log *logger.Logger) FarmHandle {
+	return &FarmHandler{
 		log:         log,
-		userStorage: us,
-		farmStorage: ds,
+		farmStorage: fs,
 	}
 }
 
-func (h *BaseHandler) Login(c echo.Context) error {
-	h.log.Info().Msgf("Handler IN: %v", c)
-	defer h.log.Info().Msgf("Handler OUT: %v", c)
-	body, err := ioutil.ReadAll(c.Request().Body)
-	if err != nil {
-		h.log.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
-		return c.NoContent(http.StatusBadRequest)
-	}
-	defer c.Request().Body.Close()
-	h.log.Info().Msg(string(body))
-	var user storage.User
-	err = json.Unmarshal(body, &user)
-	if err != nil {
-		h.log.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
-		return c.NoContent(http.StatusBadRequest)
-	}
-
-	var hash string
-	hash, err = h.userStorage.GetUserHash(c.Request().Context(), user)
-	if err != nil {
-		switch err.(type) {
-		case *storage.EmptyError:
-			h.log.Warn().Msgf("Error with code: %v", http.StatusUnauthorized)
-			return c.NoContent(http.StatusUnauthorized)
-		default:
-			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
-			return c.NoContent(http.StatusInternalServerError)
-		}
-	}
-
-	cookie := new(http.Cookie)
-	cookie.Name = config.Cookie
-	cookie.Value = hash
-	cookie.Path = "/"
-	cookie.Expires = time.Now().Add(24 * time.Hour)
-	c.SetCookie(cookie)
-
-	h.log.Info().Msgf("login success (cookie: %v)", cookie)
-	return c.NoContent(http.StatusOK)
-}
-
-func (h *BaseHandler) Logout(c echo.Context) error {
-	cookie := new(http.Cookie)
-	cookie.Name = config.Cookie
-	cookie.Value = ""
-	cookie.Path = "/"
-	cookie.Expires = time.Time{}
-	c.SetCookie(cookie)
-	h.log.Info().Msg("logout success")
-	return c.NoContent(http.StatusOK)
-}
-
-func (h *BaseHandler) Register(c echo.Context) error {
-	defer c.Request().Body.Close()
-	body, err := ioutil.ReadAll(c.Request().Body)
-	if err != nil {
-		h.log.Warn().Msgf("Register failed. Bad request.")
-		return c.NoContent(http.StatusBadRequest)
-	}
-	var user storage.User
-	err = json.Unmarshal(body, &user)
-	if (err != nil) || (user.Login == "") || (user.Password == "") {
-		h.log.Warn().Msgf("Register failed. Bad request.")
-		return c.NoContent(http.StatusBadRequest)
-	}
-	err = h.userStorage.AddUser(c.Request().Context(), user)
-	if err != nil {
-		switch err.(type) {
-		case *storage.ExistError:
-			h.log.Warn().Msgf("Error with code: %v", http.StatusConflict)
-			return c.NoContent(http.StatusConflict)
-		default:
-			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
-			return c.NoContent(http.StatusInternalServerError)
-		}
-	}
-	var hash string
-	hash, err = h.userStorage.GetUserHash(c.Request().Context(), user)
-	if err != nil {
-		switch err.(type) {
-		case *storage.EmptyError:
-			h.log.Warn().Msgf("Error with code: %v", http.StatusUnauthorized)
-			return c.NoContent(http.StatusUnauthorized)
-		default:
-			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
-			return c.NoContent(http.StatusInternalServerError)
-		}
-	}
-
-	cookie := new(http.Cookie)
-	cookie.Name = config.Cookie
-	cookie.Value = hash
-	cookie.Path = "/"
-	cookie.Expires = time.Now().Add(24 * time.Hour)
-	c.SetCookie(cookie)
-
-	return c.NoContent(http.StatusOK)
-}
-
-func (h *BaseHandler) GetFarms(c echo.Context) error {
+func (h *FarmHandler) GetFarms(c echo.Context) error {
 	cookie, _ := c.Cookie(config.Cookie)
 	h.log.Info().Msgf("Get farms for user: %v", cookie)
 	u := h.userStorage.GetUser(c.Request().Context(), cookie.Value)
@@ -171,7 +65,7 @@ func (h *BaseHandler) GetFarms(c echo.Context) error {
 	return c.JSON(http.StatusOK, farms)
 }
 
-func (h *BaseHandler) AddFarm(c echo.Context) error {
+func (h *FarmHandler) AddFarm(c echo.Context) error {
 	defer c.Request().Body.Close()
 	input, err := ioutil.ReadAll(c.Request().Body)
 	if err != nil {
@@ -204,7 +98,7 @@ func (h *BaseHandler) AddFarm(c echo.Context) error {
 	return c.NoContent(http.StatusCreated)
 }
 
-func (h *BaseHandler) DelFarm(c echo.Context) error {
+func (h *FarmHandler) DelFarm(c echo.Context) error {
 	farmID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		h.log.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
@@ -226,7 +120,7 @@ func (h *BaseHandler) DelFarm(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
-func (h *BaseHandler) GetCows(c echo.Context) error {
+func (h *FarmHandler) GetCows(c echo.Context) error {
 	farmIDStr := c.Param("id")
 	h.log.Info().Msgf("farm ID: %s", farmIDStr)
 	farmID, err := strconv.Atoi(farmIDStr)
@@ -251,7 +145,7 @@ func (h *BaseHandler) GetCows(c echo.Context) error {
 	return c.JSON(http.StatusOK, cows)
 }
 
-func (h *BaseHandler) GetCowInfo(c echo.Context) error {
+func (h *FarmHandler) GetCowInfo(c echo.Context) error {
 	cowIDStr := c.Param("id")
 	h.log.Info().Msgf("cow ID: %s", cowIDStr)
 	cowID, err := strconv.Atoi(cowIDStr)
@@ -276,7 +170,7 @@ func (h *BaseHandler) GetCowInfo(c echo.Context) error {
 	return c.JSON(http.StatusOK, cow)
 }
 
-func (h *BaseHandler) AddMonitoringData(c echo.Context) error {
+func (h *FarmHandler) AddMonitoringData(c echo.Context) error {
 	defer c.Request().Body.Close()
 	input, err := ioutil.ReadAll(c.Request().Body)
 	if err != nil {
@@ -302,7 +196,7 @@ func (h *BaseHandler) AddMonitoringData(c echo.Context) error {
 	return c.NoContent(http.StatusAccepted)
 }
 
-func (h *BaseHandler) GetBolusesTypes(c echo.Context) error {
+func (h *FarmHandler) GetBolusesTypes(c echo.Context) error {
 	types, err := h.farmStorage.GetBolusesTypes(c.Request().Context())
 	if err != nil {
 		switch err.(type) {
@@ -318,7 +212,7 @@ func (h *BaseHandler) GetBolusesTypes(c echo.Context) error {
 	return c.String(http.StatusOK, types)
 }
 
-func (h *BaseHandler) GetCowBreeds(c echo.Context) error {
+func (h *FarmHandler) GetCowBreeds(c echo.Context) error {
 	breeds, err := h.farmStorage.GetCowBreeds(c.Request().Context())
 	if err != nil {
 		switch err.(type) {
@@ -334,7 +228,7 @@ func (h *BaseHandler) GetCowBreeds(c echo.Context) error {
 	return c.JSON(http.StatusOK, breeds)
 }
 
-func (h *BaseHandler) AddCow(c echo.Context) error {
+func (h *FarmHandler) AddCow(c echo.Context) error {
 	defer c.Request().Body.Close()
 	input, err := ioutil.ReadAll(c.Request().Body)
 	if err != nil {
@@ -365,7 +259,7 @@ func (h *BaseHandler) AddCow(c echo.Context) error {
 	return c.NoContent(http.StatusCreated)
 }
 
-func (h *BaseHandler) DelCows(c echo.Context) error {
+func (h *FarmHandler) DelCows(c echo.Context) error {
 	defer c.Request().Body.Close()
 	IDs, err := getIDFromJSON(c.Request().Body)
 	if err != nil {
@@ -384,11 +278,6 @@ func (h *BaseHandler) DelCows(c echo.Context) error {
 		}
 	}
 	return c.NoContent(http.StatusAccepted)
-}
-
-func (h *BaseHandler) ResponseBadRequest(c echo.Context) error {
-	h.log.Info().Msgf("bad request. Error code: %v", http.StatusBadRequest)
-	return c.NoContent(http.StatusBadRequest)
 }
 
 func getIDFromJSON(reader io.ReadCloser) ([]int, error) {

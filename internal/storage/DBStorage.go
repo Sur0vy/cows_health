@@ -178,7 +178,7 @@ func (s *DBStorage) DelFarm(c context.Context, farmID int) error {
 		return err
 	}
 	if count == 0 {
-		s.log.Info().Msgf("no farm with index %s", farmID)
+		s.log.Info().Msgf("no farm with index %d", farmID)
 		return NewEmptyError()
 	}
 

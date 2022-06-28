@@ -9,36 +9,38 @@ import (
 	"github.com/Sur0vy/cows_health.git/internal/storage"
 )
 
-func SetupServer(us storage.UserStorage, ds storage.FarmStorage, log *logger.Logger) *echo.Echo {
+func SetupServer(us storage.UserStorage, fs storage.FarmStorage, log *logger.Logger) *echo.Echo {
 
-	handler := handlers.NewBaseHandler(us, ds, log)
+	uHandler := handlers.NewUserHandler(us, log)
+	fHandler := handlers.NewFarmHandler(fs, log)
+
 	router := echo.New()
 
 	router.Use(middleware.Gzip())
-	
-	router.Any("/*", handler.ResponseBadRequest)
+
+	router.Any("/*", uHandler.ResponseBadRequest)
 
 	api := router.Group("/api")
 
 	user := api.Group("/user")
-	user.POST("/register", handler.Register)
-	user.POST("/login", handler.Login)
-	user.POST("/logout", handler.Logout)
+	user.POST("/register", uHandler.Register)
+	user.POST("/login", uHandler.Login)
+	user.POST("/logout", uHandler.Logout)
 
 	farms := api.Group("/farms", AuthMiddleware(us))
-	farms.GET("", handler.GetFarms)
-	farms.POST("", handler.AddFarm)
-	farms.DELETE("/:id", handler.DelFarm)
-	farms.GET("/:id/cows", handler.GetCows)
+	farms.GET("", fHandler.GetFarms)
+	farms.POST("", fHandler.AddFarm)
+	farms.DELETE("/:id", fHandler.DelFarm)
+	farms.GET("/:id/cows", fHandler.GetCows)
 
 	boluses := api.Group("/boluses", AuthMiddleware(us))
-	boluses.GET("/types", handler.GetBolusesTypes)
-	boluses.POST("/data", handler.AddMonitoringData)
+	boluses.GET("/types", fHandler.GetBolusesTypes)
+	boluses.POST("/data", fHandler.AddMonitoringData)
 
 	cows := api.Group("/cows", AuthMiddleware(us))
-	cows.GET("/breeds", handler.GetCowBreeds)
-	cows.POST("", handler.AddCow)
-	cows.DELETE("", handler.DelCows)
-	cows.GET(":id/info", handler.GetCowInfo)
+	cows.GET("/breeds", fHandler.GetCowBreeds)
+	cows.POST("", fHandler.AddCow)
+	cows.DELETE("", fHandler.DelCows)
+	cows.GET(":id/info", fHandler.GetCowInfo)
 	return router
 }
