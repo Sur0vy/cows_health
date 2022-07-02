@@ -7,16 +7,17 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/Sur0vy/cows_health.git/internal/config"
-	"github.com/Sur0vy/cows_health.git/internal/storage"
+	"github.com/Sur0vy/cows_health.git/internal/storages"
 )
 
-func AuthMiddleware(s storage.UserStorage) echo.MiddlewareFunc {
+func AuthMiddleware(s storages.UserStorageDB) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			cookie, err := c.Cookie(config.Cookie)
 			if err == nil && cookie.Value != "" {
-				u := s.GetUser(context.Background(), cookie.Value)
+				u := s.Get(context.Background(), cookie.Value)
 				if u != nil {
+					c.Set("UserID", u.ID)
 					return next(c)
 				}
 			}

@@ -1,4 +1,4 @@
-package handlers
+package user
 
 import (
 	"encoding/json"
@@ -9,31 +9,30 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/Sur0vy/cows_health.git/internal/config"
+	"github.com/Sur0vy/cows_health.git/internal/errors"
 	"github.com/Sur0vy/cows_health.git/internal/logger"
-	"github.com/Sur0vy/cows_health.git/internal/storage"
+	"github.com/Sur0vy/cows_health.git/internal/models"
 )
 
-type UserHandle interface {
+type Handle interface {
 	Login(c echo.Context) error
 	Logout(c echo.Context) error
 	Register(c echo.Context) error
-
-	ResponseBadRequest(c echo.Context) error
 }
 
-type UserHandler struct {
-	log         *logger.Logger
-	userStorage storage.UserStorage
+type Handler struct {
+	log *logger.Logger
+	us  models.UserStorage
 }
 
-func NewUserHandler(us storage.UserStorage, log *logger.Logger) UserHandle {
-	return &UserHandler{
-		log:         log,
-		userStorage: us,
+func NewUserHandler(us models.UserStorage, log *logger.Logger) Handle {
+	return &Handler{
+		log: log,
+		us:  us,
 	}
 }
 
-func (h *UserHandler) Login(c echo.Context) error {
+func (h *Handler) Login(c echo.Context) error {
 	h.log.Info().Msgf("Handler IN: %v", c)
 	defer h.log.Info().Msgf("Handler OUT: %v", c)
 	body, err := ioutil.ReadAll(c.Request().Body)
@@ -43,7 +42,7 @@ func (h *UserHandler) Login(c echo.Context) error {
 	}
 	defer c.Request().Body.Close()
 	h.log.Info().Msg(string(body))
-	var user storage.User
+	var user models.User
 	err = json.Unmarshal(body, &user)
 	if err != nil {
 		h.log.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
@@ -51,10 +50,10 @@ func (h *UserHandler) Login(c echo.Context) error {
 	}
 
 	var hash string
-	hash, err = h.userStorage.GetUserHash(c.Request().Context(), user)
+	hash, err = h.us.GetHash(c.Request().Context(), user)
 	if err != nil {
 		switch err.(type) {
-		case *storage.EmptyError:
+		case *errors.EmptyError:
 			h.log.Warn().Msgf("Error with code: %v", http.StatusUnauthorized)
 			return c.NoContent(http.StatusUnauthorized)
 		default:
@@ -74,7 +73,7 @@ func (h *UserHandler) Login(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
-func (h *UserHandler) Logout(c echo.Context) error {
+func (h *Handler) Logout(c echo.Context) error {
 	cookie := new(http.Cookie)
 	cookie.Name = config.Cookie
 	cookie.Value = ""
@@ -85,23 +84,23 @@ func (h *UserHandler) Logout(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
-func (h *UserHandler) Register(c echo.Context) error {
+func (h *Handler) Register(c echo.Context) error {
 	defer c.Request().Body.Close()
 	body, err := ioutil.ReadAll(c.Request().Body)
 	if err != nil {
 		h.log.Warn().Msgf("Register failed. Bad request.")
 		return c.NoContent(http.StatusBadRequest)
 	}
-	var user storage.User
+	var user models.User
 	err = json.Unmarshal(body, &user)
 	if (err != nil) || (user.Login == "") || (user.Password == "") {
 		h.log.Warn().Msgf("Register failed. Bad request.")
 		return c.NoContent(http.StatusBadRequest)
 	}
-	err = h.userStorage.AddUser(c.Request().Context(), user)
+	err = h.us.Add(c.Request().Context(), user)
 	if err != nil {
 		switch err.(type) {
-		case *storage.ExistError:
+		case *errors.ExistError:
 			h.log.Warn().Msgf("Error with code: %v", http.StatusConflict)
 			return c.NoContent(http.StatusConflict)
 		default:
@@ -110,10 +109,10 @@ func (h *UserHandler) Register(c echo.Context) error {
 		}
 	}
 	var hash string
-	hash, err = h.userStorage.GetUserHash(c.Request().Context(), user)
+	hash, err = h.us.GetHash(c.Request().Context(), user)
 	if err != nil {
 		switch err.(type) {
-		case *storage.EmptyError:
+		case *errors.EmptyError:
 			h.log.Warn().Msgf("Error with code: %v", http.StatusUnauthorized)
 			return c.NoContent(http.StatusUnauthorized)
 		default:
@@ -130,9 +129,4 @@ func (h *UserHandler) Register(c echo.Context) error {
 	c.SetCookie(cookie)
 
 	return c.NoContent(http.StatusOK)
-}
-
-func (h *UserHandler) ResponseBadRequest(c echo.Context) error {
-	h.log.Info().Msgf("bad request. Error code: %v", http.StatusBadRequest)
-	return c.NoContent(http.StatusBadRequest)
 }

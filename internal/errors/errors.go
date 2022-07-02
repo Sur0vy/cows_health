@@ -1,4 +1,4 @@
-package storage
+package errors
 
 type ExistError struct {
 	message string

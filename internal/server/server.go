@@ -1,46 +1,47 @@
 package server
 
 import (
+	"github.com/Sur0vy/cows_health.git/internal/models"
+	"net/http"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
-	"github.com/Sur0vy/cows_health.git/internal/handlers"
+	//"github.com/Sur0vy/cows_health.git/internal/entity/farm"
+	//"github.com/Sur0vy/cows_health.git/internal/entity/user"
+	"github.com/Sur0vy/cows_health.git/internal/handlers/user"
 	"github.com/Sur0vy/cows_health.git/internal/logger"
-	"github.com/Sur0vy/cows_health.git/internal/storage"
 )
 
-func SetupServer(us storage.UserStorage, fs storage.FarmStorage, log *logger.Logger) *echo.Echo {
-
-	uHandler := handlers.NewUserHandler(us, log)
-	fHandler := handlers.NewFarmHandler(fs, log)
+//func SetupServer(us user.Storage, fs farm.FarmStorage, log *logger.Logger) *echo.Echo {
+func SetupServer(us models.UserStorage, log *logger.Logger) *echo.Echo {
+	//fHandler := farm.NewFarmHandler(fs, log)
 
 	router := echo.New()
-
 	router.Use(middleware.Gzip())
-
-	router.Any("/*", uHandler.ResponseBadRequest)
-
+	//any rout
+	router.Any("/*", func(c echo.Context) error {
+		log.Info().Msgf("bad request. Error code: %v", http.StatusBadRequest)
+		return c.NoContent(http.StatusBadRequest)
+	})
 	api := router.Group("/api")
+	user.Init(api, us, log)
 
-	user := api.Group("/user")
-	user.POST("/register", uHandler.Register)
-	user.POST("/login", uHandler.Login)
-	user.POST("/logout", uHandler.Logout)
-
-	farms := api.Group("/farms", AuthMiddleware(us))
-	farms.GET("", fHandler.GetFarms)
-	farms.POST("", fHandler.AddFarm)
-	farms.DELETE("/:id", fHandler.DelFarm)
-	farms.GET("/:id/cows", fHandler.GetCows)
-
-	boluses := api.Group("/boluses", AuthMiddleware(us))
-	boluses.GET("/types", fHandler.GetBolusesTypes)
-	boluses.POST("/data", fHandler.AddMonitoringData)
-
-	cows := api.Group("/cows", AuthMiddleware(us))
-	cows.GET("/breeds", fHandler.GetCowBreeds)
-	cows.POST("", fHandler.AddCow)
-	cows.DELETE("", fHandler.DelCows)
-	cows.GET(":id/info", fHandler.GetCowInfo)
+	//farms := api.Group("/farms", AuthMiddleware(us))
+	//
+	//farms.GET("", fHandler.GetFarms)
+	//farms.POST("", fHandler.AddFarm)
+	//farms.DELETE("/:id", fHandler.DelFarm)
+	//farms.GET("/:id/cows", fHandler.GetCows)
+	//
+	//boluses := api.Group("/boluses", AuthMiddleware(us))
+	//boluses.GET("/types", fHandler.GetBolusesTypes)
+	//boluses.POST("/data", fHandler.AddMonitoringData)
+	//
+	//cows := api.Group("/cows", AuthMiddleware(us))
+	//cows.GET("/breeds", fHandler.GetCowBreeds)
+	//cows.POST("", fHandler.AddCow)
+	//cows.DELETE("", fHandler.DelCows)
+	//cows.GET(":id/info", fHandler.GetCowInfo)
 	return router
 }

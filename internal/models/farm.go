@@ -1,4 +1,4 @@
-package storage
+package models
 
 import (
 	"context"
@@ -57,14 +57,16 @@ type FarmStorage interface {
 	GetFarms(с context.Context, userID int) ([]Farm, error)
 	AddFarm(с context.Context, farm Farm) error
 	DelFarm(с context.Context, farmID int) error
-	GetCows(c context.Context, farmID int) (string, error)
+
+	GetCows(c context.Context, farmID int) ([]Cow, error)
 	AddCow(c context.Context, cow Cow) error
 	DeleteCows(c context.Context, CowIDs []int) error
 	UpdateHealth(c context.Context, data Health) error
 	GetCowInfo(c context.Context, farmID int) (string, error)
-	GetCowBreeds(c context.Context) (string, error)
+	GetCowBreeds(c context.Context) ([]CowBreed, error)
 	HasBolus(c context.Context, BolusNum int) int
 	GetBolusesTypes(c context.Context) (string, error)
+
 	AddMonitoringData(c context.Context, data MonitoringData) error
 	GetMonitoringData(c context.Context, cowID int, interval int) ([]MonitoringData, error)
 }

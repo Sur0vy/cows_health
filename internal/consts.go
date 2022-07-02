@@ -1,10 +1,10 @@
-package storage
+package internal
 
 const (
 	//tables names
-	TBreed          string = "breeds"
-	TCow            string = "cows"
-	TUser           string = "users"
+	TBreed string = "breeds"
+	TCow   string = "cows"
+	//TUser           string = "users"
 	TFarm           string = "farms"
 	THealth         string = "health"
 	TMonitoringData string = "monitoring_data"
@@ -12,10 +12,10 @@ const (
 	//fields
 	FBreedID string = "breed_id"
 
-	FUserID   string = "user_id"
-	FLogin    string = "login"
-	FPassword string = "password"
-	FDeleted  string = "deleted"
+	//FUserID   string = "user_id"
+	//FLogin    string = "login"
+	//FPassword string = "password"
+	//FDeleted  string = "deleted"
 
 	FFarmID  string = "farm_id"
 	FAddress string = "address"
