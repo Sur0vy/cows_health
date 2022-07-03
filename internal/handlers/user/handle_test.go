@@ -17,14 +17,13 @@ import (
 )
 
 func TestHandler_Login(t *testing.T) {
-	//то, что замокано
 	type args struct {
-		user models.User
-		body string
-		hash string
-		err  error
+		useMocks bool
+		user     models.User
+		body     string
+		hash     string
+		err      error
 	}
-	//ожидание
 	type want struct {
 		code int
 		hash string
@@ -37,6 +36,7 @@ func TestHandler_Login(t *testing.T) {
 		{
 			name: "unexpected storage error",
 			args: args{
+				useMocks: true,
 				user: models.User{
 					Login:    "User",
 					Password: "pa$$word_1",
@@ -53,6 +53,7 @@ func TestHandler_Login(t *testing.T) {
 		{
 			name: "no user",
 			args: args{
+				useMocks: true,
 				user: models.User{
 					Login:    "User",
 					Password: "pa$$word_1",
@@ -67,8 +68,23 @@ func TestHandler_Login(t *testing.T) {
 			},
 		},
 		{
+			name: "bad body",
+			args: args{
+				useMocks: false,
+				user:     models.User{},
+				body:     "uncorrected JSON string",
+				hash:     "8f9bfe9d1345237cb3b2b205864da075",
+				err:      nil,
+			},
+			want: want{
+				code: http.StatusBadRequest,
+				hash: "",
+			},
+		},
+		{
 			name: "login success",
 			args: args{
+				useMocks: true,
 				user: models.User{
 					Login:    "User",
 					Password: "pa$$word_1",
@@ -82,22 +98,6 @@ func TestHandler_Login(t *testing.T) {
 				hash: "8f9bfe9d1345237cb3b2b205864da075",
 			},
 		},
-		{
-			name: "bad body",
-			args: args{
-				user: models.User{
-					Login:    "User",
-					Password: "pa$$word_1",
-				},
-				body: "uncorrect JSON string",
-				hash: "8f9bfe9d1345237cb3b2b205864da075",
-				err:  nil,
-			},
-			want: want{
-				code: http.StatusBadRequest,
-				hash: "",
-			},
-		},
 	}
 
 	repo := &storage_mock.UserStorage{}
@@ -108,9 +108,11 @@ func TestHandler_Login(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo.On("GetHash", context.Background(), tt.args.user).
-				Return(tt.args.hash, tt.args.err).
-				Once()
+			if tt.args.useMocks {
+				repo.On("GetHash", context.Background(), tt.args.user).
+					Return(tt.args.hash, tt.args.err).
+					Once()
+			}
 			body := bytes.NewBuffer([]byte(tt.args.body))
 			recorder := httptest.NewRecorder()
 			req, err := http.NewRequest("POST", "/api/user/login", body)
@@ -125,11 +127,9 @@ func TestHandler_Login(t *testing.T) {
 }
 
 func TestHandler_Logout(t *testing.T) {
-	//то, что замокано
 	type args struct {
 		body string
 	}
-	//ожидание
 	type want struct {
 		code int
 		hash string
@@ -176,14 +176,15 @@ func TestHandler_Logout(t *testing.T) {
 }
 
 func TestHandler_Register(t *testing.T) {
-	//то, что замокано
 	type args struct {
-		user models.User
-		body string
-		hash string
-		err  error
+		useMocksGH bool
+		useMocksA  bool
+		user       models.User
+		body       string
+		hash       string
+		errGH      error
+		errA       error
 	}
-	//ожидание
 	type want struct {
 		code int
 		hash string
@@ -194,47 +195,18 @@ func TestHandler_Register(t *testing.T) {
 		want want
 	}{
 		{
-			name: "unexpected storage error",
+			name: "add user success",
 			args: args{
+				useMocksGH: true,
+				useMocksA:  true,
 				user: models.User{
 					Login:    "User",
 					Password: "pa$$word_1",
 				},
-				body: "{\"login\":\"User\",\"password\":\"pa$$word_1\"}",
-				hash: "8f9bfe9d1345237cb3b2b205864da075",
-				err:  errors.NewExistError(),
-			},
-			want: want{
-				code: http.StatusInternalServerError,
-				hash: "8f9bfe9d1345237cb3b2b205864da075",
-			},
-		},
-		{
-			name: "no user",
-			args: args{
-				user: models.User{
-					Login:    "User",
-					Password: "pa$$word_1",
-				},
-				body: "{\"login\":\"User\",\"password\":\"pa$$word_1\"}",
-				hash: "8f9bfe9d1345237cb3b2b205864da075",
-				err:  errors.NewEmptyError(),
-			},
-			want: want{
-				code: http.StatusUnauthorized,
-				hash: "",
-			},
-		},
-		{
-			name: "login success",
-			args: args{
-				user: models.User{
-					Login:    "User",
-					Password: "pa$$word_1",
-				},
-				body: "{\"login\":\"User\",\"password\":\"pa$$word_1\"}",
-				hash: "8f9bfe9d1345237cb3b2b205864da075",
-				err:  nil,
+				body:  "{\"login\":\"User\",\"password\":\"pa$$word_1\"}",
+				hash:  "8f9bfe9d1345237cb3b2b205864da075",
+				errGH: nil,
+				errA:  nil,
 			},
 			want: want{
 				code: http.StatusOK,
@@ -244,17 +216,93 @@ func TestHandler_Register(t *testing.T) {
 		{
 			name: "bad body",
 			args: args{
-				user: models.User{
-					Login:    "User",
-					Password: "pa$$word_1",
-				},
-				body: "uncorrect JSON string",
-				hash: "8f9bfe9d1345237cb3b2b205864da075",
-				err:  nil,
+				useMocksGH: false,
+				useMocksA:  false,
+				user:       models.User{},
+				body:       "uncorrected JSON string",
+				hash:       "8f9bfe9d1345237cb3b2b205864da075",
+				errGH:      nil,
+				errA:       nil,
 			},
 			want: want{
 				code: http.StatusBadRequest,
 				hash: "",
+			},
+		},
+		{
+			name: "user exist",
+			args: args{
+				useMocksGH: false,
+				useMocksA:  true,
+				user: models.User{
+					Login:    "User",
+					Password: "pa$$word_1",
+				},
+				body:  "{\"login\":\"User\",\"password\":\"pa$$word_1\"}",
+				hash:  "8f9bfe9d1345237cb3b2b205864da075",
+				errGH: nil,
+				errA:  errors.NewExistError(),
+			},
+			want: want{
+				code: http.StatusConflict,
+				hash: "",
+			},
+		},
+		{
+			name: "unexpected error add",
+			args: args{
+				useMocksGH: false,
+				useMocksA:  true,
+				user: models.User{
+					Login:    "User",
+					Password: "pa$$word_1",
+				},
+				body:  "{\"login\":\"User\",\"password\":\"pa$$word_1\"}",
+				hash:  "8f9bfe9d1345237cb3b2b205864da075",
+				errGH: nil,
+				errA:  errors.NewEmptyError(),
+			},
+			want: want{
+				code: http.StatusInternalServerError,
+				hash: "",
+			},
+		},
+		{
+			name: "get user hash error",
+			args: args{
+				useMocksGH: true,
+				useMocksA:  true,
+				user: models.User{
+					Login:    "User",
+					Password: "pa$$word_1",
+				},
+				body:  "{\"login\":\"User\",\"password\":\"pa$$word_1\"}",
+				hash:  "8f9bfe9d1345237cb3b2b205864da075",
+				errGH: errors.NewEmptyError(),
+				errA:  nil,
+			},
+			want: want{
+				code: http.StatusUnauthorized,
+				hash: "",
+			},
+		},
+		{
+			name: "unexpected storage error",
+			args: args{
+				useMocksGH: true,
+				useMocksA:  true,
+				user: models.User{
+					Login:    "User",
+					Password: "pa$$word_1",
+				},
+				body:  "{\"login\":\"User\",\"password\":\"pa$$word_1\"}",
+				hash:  "8f9bfe9d1345237cb3b2b205864da075",
+				errGH: errors.NewExistError(),
+				errA:  nil,
+			},
+			want: want{
+				code: http.StatusInternalServerError,
+				hash: "8f9bfe9d1345237cb3b2b205864da075",
 			},
 		},
 	}
@@ -263,25 +311,32 @@ func TestHandler_Register(t *testing.T) {
 
 	uh := NewUserHandler(repo, logger.New())
 	router := echo.New()
-	router.POST("/api/user/login", uh.Login)
+	router.POST("/api/user/register", uh.Register)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo.On("GetHash", context.Background(), tt.args.user).
-				Return(tt.args.hash, tt.args.err).
-				Once()
-			repo.On("Add", context.Background(), tt.args.user).
-				Return(tt.args.hash, tt.args.err).
-				Once()
+			if tt.args.useMocksGH {
+				repo.On("GetHash", context.Background(), tt.args.user).
+					Return(tt.args.hash, tt.args.errGH).
+					Once()
+			}
+			if tt.args.useMocksA {
+				repo.On("Add", context.Background(), tt.args.user).
+					Return(tt.args.errA).
+					Once()
+			}
 			body := bytes.NewBuffer([]byte(tt.args.body))
 			recorder := httptest.NewRecorder()
-			req, err := http.NewRequest("POST", "/api/user/login", body)
+			req, err := http.NewRequest("POST", "/api/user/register", body)
 			router.ServeHTTP(recorder, req)
 			assert.Nil(t, err)
 			assert.Equal(t, tt.want.code, recorder.Code)
 			if len(recorder.Result().Cookies()) > 0 && len(tt.want.hash) > 0 {
 				assert.Equal(t, tt.want.hash, recorder.Result().Cookies()[0].Value)
 			}
+
+			//StatusUnauthorized
+			//StatusInternalServerError
 		})
 	}
 }
