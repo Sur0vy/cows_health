@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/Sur0vy/cows_health.git/internal/handlers/farm"
 	"github.com/Sur0vy/cows_health.git/internal/models"
 	"net/http"
 
@@ -13,8 +14,7 @@ import (
 	"github.com/Sur0vy/cows_health.git/internal/logger"
 )
 
-//func SetupServer(us user.Storage, fs farm.FarmStorage, log *logger.Logger) *echo.Echo {
-func SetupServer(us models.UserStorage, log *logger.Logger) *echo.Echo {
+func SetupServer(us models.UserStorage, fs models.FarmStorage, log *logger.Logger) *echo.Echo {
 	//fHandler := farm.NewFarmHandler(fs, log)
 
 	router := echo.New()
@@ -25,13 +25,12 @@ func SetupServer(us models.UserStorage, log *logger.Logger) *echo.Echo {
 		return c.NoContent(http.StatusBadRequest)
 	})
 	api := router.Group("/api")
-	user.Init(api, us, log)
+	userGrp := api.Group("/user")
+	user.Init(userGrp, us, log)
 
-	//farms := api.Group("/farms", AuthMiddleware(us))
-	//
-	//farms.GET("", fHandler.GetFarms)
-	//farms.POST("", fHandler.AddFarm)
-	//farms.DELETE("/:id", fHandler.DelFarm)
+	farmGrp := api.Group("/farm", AuthMiddleware(us))
+	farm.Init(farmGrp, fs, log)
+
 	//farms.GET("/:id/cows", fHandler.GetCows)
 	//
 	//boluses := api.Group("/boluses", AuthMiddleware(us))

@@ -17,9 +17,9 @@ const (
 	//FPassword string = "password"
 	//FDeleted  string = "deleted"
 
-	FFarmID  string = "farm_id"
-	FAddress string = "address"
-	FName    string = "name"
+	//FFarmID  string = "farm_id"
+	//FAddress string = "address"
+	FName string = "name"
 
 	FCowID      string = "cow_id"
 	FBolus      string = "bolus_sn"

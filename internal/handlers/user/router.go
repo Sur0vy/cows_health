@@ -9,8 +9,7 @@ import (
 func Init(group *echo.Group, st models.UserStorage, log *logger.Logger) {
 	uHandler := NewUserHandler(st, log)
 
-	user := group.Group("/user")
-	user.POST("/register", uHandler.Register)
-	user.POST("/login", uHandler.Login)
-	user.POST("/logout", uHandler.Logout)
+	group.POST("/register", uHandler.Register)
+	group.POST("/login", uHandler.Login)
+	group.POST("/logout", uHandler.Logout)
 }

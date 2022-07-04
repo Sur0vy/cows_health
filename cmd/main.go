@@ -23,9 +23,9 @@ func main() {
 	//	createTables(db, log)
 
 	us := storages.NewUserDB(db, log)
-	//ds := farm.NewDBStorage(db, log)
+	fs := storages.NewFarmDB(db, log)
 
-	var err = server.SetupServer(us, log).Start(cnf.ServerHostPort)
+	var err = server.SetupServer(us, fs, log).Start(cnf.ServerHostPort)
 
 	if err == nil {
 		log.Panic().Err(err).Msg(err.Error())

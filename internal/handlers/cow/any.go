@@ -1,28 +1,5 @@
-package farm
+package cow
 
-//import (
-//	"encoding/json"
-//	"github.com/Sur0vy/cows_health.git/internal/entity/monitoringData"
-//	"github.com/Sur0vy/cows_health.git/internal/errors"
-//	"github.com/Sur0vy/cows_health.git/internal/models"
-//	"io"
-//	"io/ioutil"
-//	"net/http"
-//	"strconv"
-//	"sync"
-//	"time"
-//
-//	"github.com/labstack/echo/v4"
-//
-//	"github.com/Sur0vy/cows_health.git/internal/config"
-//	"github.com/Sur0vy/cows_health.git/internal/logger"
-//)
-//
-//type FarmHandle interface {
-//	GetFarms(c echo.Context) error
-//	AddFarm(c echo.Context) error
-//	DelFarm(c echo.Context) error
-//
 //	GetCowBreeds(c echo.Context) error
 //	GetCows(c echo.Context) error
 //
@@ -33,90 +10,7 @@ package farm
 //	GetBolusesTypes(c echo.Context) error
 //	AddMonitoringData(c echo.Context) error
 //}
-//
-//type FarmHandler struct {
-//	log *logger.Logger
-//	//	userStorage storage.UserStorage
-//	farmStorage models.FarmStorage
-//}
-//
-//func NewFarmHandler(fs models.FarmStorage, log *logger.Logger) FarmHandle {
-//	return &FarmHandler{
-//		log:         log,
-//		farmStorage: fs,
-//	}
-//}
-//
-//func (h *FarmHandler) GetFarms(c echo.Context) error {
-//	cookie, _ := c.Cookie(config.Cookie)
-//	h.log.Info().Msgf("Get farms for user: %v", cookie)
-//	farms, err := h.farmStorage.GetFarms(c.Request().Context(), c.Get("UserID").(int))
-//
-//	if err != nil {
-//		switch err.(type) {
-//		case *errors.EmptyError:
-//			h.log.Warn().Msgf("Error with code: %v", http.StatusNoContent)
-//			return c.NoContent(http.StatusNoContent)
-//		default:
-//			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
-//			return c.NoContent(http.StatusInternalServerError)
-//		}
-//	}
-//	h.log.Info().Msg("Farms for user getting success")
-//	return c.JSON(http.StatusOK, farms)
-//}
-//
-//func (h *FarmHandler) AddFarm(c echo.Context) error {
-//	defer c.Request().Body.Close()
-//	input, err := ioutil.ReadAll(c.Request().Body)
-//	if err != nil {
-//		h.log.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
-//		return c.NoContent(http.StatusBadRequest)
-//	}
-//
-//	var farm models.Farm
-//	if err := json.Unmarshal(input, &farm); err != nil {
-//		h.log.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
-//		return c.NoContent(http.StatusBadRequest)
-//	}
-//	farm.UserID = c.Get("UserID").(int)
-//	err = h.farmStorage.AddFarm(c.Request().Context(), farm)
-//
-//	if err != nil {
-//		switch err.(type) {
-//		case *errors.ExistError:
-//			h.log.Warn().Msgf("Error with code: %v", http.StatusConflict)
-//			return c.NoContent(http.StatusConflict)
-//		default:
-//			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
-//			return c.NoContent(http.StatusInternalServerError)
-//		}
-//	}
-//	h.log.Info().Msg("Farms for user added success")
-//	return c.NoContent(http.StatusCreated)
-//}
-//
-//func (h *FarmHandler) DelFarm(c echo.Context) error {
-//	farmID, err := strconv.Atoi(c.Param("id"))
-//	if err != nil {
-//		h.log.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
-//		return c.NoContent(http.StatusBadRequest)
-//	}
-//	h.log.Info().Msgf("Delete farm with index: %v", farmID)
-//	err = h.farmStorage.DelFarm(c.Request().Context(), farmID)
-//	if err != nil {
-//		switch err.(type) {
-//		case *errors.EmptyError:
-//			h.log.Warn().Msgf("Error with code: %v", http.StatusConflict)
-//			return c.NoContent(http.StatusConflict)
-//		default:
-//			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
-//			return c.NoContent(http.StatusInternalServerError)
-//		}
-//	}
-//
-//	return c.NoContent(http.StatusOK)
-//}
+
 //
 //func (h *FarmHandler) GetCows(c echo.Context) error {
 //	farmIDStr := c.Param("id")

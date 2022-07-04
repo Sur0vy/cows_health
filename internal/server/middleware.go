@@ -7,10 +7,10 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/Sur0vy/cows_health.git/internal/config"
-	"github.com/Sur0vy/cows_health.git/internal/storages"
+	"github.com/Sur0vy/cows_health.git/internal/models"
 )
 
-func AuthMiddleware(s storages.UserStorageDB) echo.MiddlewareFunc {
+func AuthMiddleware(s models.UserStorage) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			cookie, err := c.Cookie(config.Cookie)
