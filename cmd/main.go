@@ -22,7 +22,12 @@ func main() {
 	log.Info().Msgf("Load storage with parameters %s", cnf.DSN)
 
 	db := connectToDB(cnf.DSN)
-	defer db.Close()
+	defer func(db *sqlx.DB) {
+		err := db.Close()
+		if err != nil {
+			log.Panic().Err(err).Msg(err.Error())
+		}
+	}(db)
 	log.Info().Msg("Creating database")
 	createTables(db)
 

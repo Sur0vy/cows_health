@@ -3,6 +3,7 @@ package user
 import (
 	"bytes"
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,7 +13,7 @@ import (
 
 	"github.com/Sur0vy/cows_health.git/internal/errors"
 	"github.com/Sur0vy/cows_health.git/internal/logger"
-	storage_mock "github.com/Sur0vy/cows_health.git/internal/mocks"
+	storageMock "github.com/Sur0vy/cows_health.git/internal/mocks"
 	"github.com/Sur0vy/cows_health.git/internal/models"
 )
 
@@ -100,7 +101,7 @@ func TestHandler_Login(t *testing.T) {
 		},
 	}
 
-	repo := &storage_mock.UserStorage{}
+	repo := &storageMock.UserStorage{}
 
 	uh := NewUserHandler(repo, logger.New())
 	router := echo.New()
@@ -117,7 +118,12 @@ func TestHandler_Login(t *testing.T) {
 			recorder := httptest.NewRecorder()
 			req, err := http.NewRequest("POST", "/api/user/login", body)
 			if err != nil {
-				defer req.Body.Close()
+				defer func(Body io.ReadCloser) {
+					err := Body.Close()
+					if err != nil {
+						panic(err)
+					}
+				}(req.Body)
 			}
 			router.ServeHTTP(recorder, req)
 			assert.Nil(t, err)
@@ -154,7 +160,7 @@ func TestHandler_Logout(t *testing.T) {
 		},
 	}
 
-	repo := &storage_mock.UserStorage{}
+	repo := &storageMock.UserStorage{}
 
 	uh := NewUserHandler(repo, logger.New())
 	router := echo.New()
@@ -162,9 +168,6 @@ func TestHandler_Logout(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			//repo.On("GetHash", context.Background(), tt.args.user).
-			//	Return(tt.args.hash, tt.args.err).
-			//	Once()
 			recorder := httptest.NewRecorder()
 			body := bytes.NewBuffer([]byte(tt.args.body))
 			req, err := http.NewRequest("POST", "/api/user/logout", body)
@@ -310,7 +313,7 @@ func TestHandler_Register(t *testing.T) {
 		},
 	}
 
-	repo := &storage_mock.UserStorage{}
+	repo := &storageMock.UserStorage{}
 
 	uh := NewUserHandler(repo, logger.New())
 	router := echo.New()
