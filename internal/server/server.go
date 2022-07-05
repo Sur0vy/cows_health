@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/Sur0vy/cows_health.git/internal/usecase/data_processor"
+	"github.com/Sur0vy/cows_health.git/internal/usecase/dataprocessor"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -35,7 +35,7 @@ func SetupServer(us models.UserStorage, fs models.FarmStorage,
 	cowGrp := api.Group("/cow", AuthMiddleware(us))
 	cow.Init(cowGrp, cs, log)
 
-	dp := data_processor.NewDataProcessor(ms, cs, log)
+	dp := dataprocessor.NewDataProcessor(ms, cs, log)
 	mdGrp := api.Group("/data", AuthMiddleware(us))
 	monitoring_data.Init(mdGrp, ms, *dp, log)
 

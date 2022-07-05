@@ -2,7 +2,7 @@ package monitoring_data
 
 import (
 	"encoding/json"
-	"github.com/Sur0vy/cows_health.git/internal/usecase/data_processor"
+	"github.com/Sur0vy/cows_health.git/internal/usecase/dataprocessor"
 	"github.com/labstack/echo/v4"
 	"io/ioutil"
 	"net/http"
@@ -19,10 +19,10 @@ type Handle interface {
 type Handler struct {
 	log       *logger.Logger
 	mdStorage models.MonitoringDataStorage
-	processor data_processor.Processor
+	processor dataprocessor.Processor
 }
 
-func NewMonitoringDataHandler(ms models.MonitoringDataStorage, dp data_processor.Processor, log *logger.Logger) Handle {
+func NewMonitoringDataHandler(ms models.MonitoringDataStorage, dp dataprocessor.Processor, log *logger.Logger) Handle {
 	return &Handler{
 		log:       log,
 		mdStorage: ms,
