@@ -2,7 +2,6 @@ package storages
 
 import (
 	"context"
-	"github.com/Sur0vy/cows_health.git/internal/models"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
@@ -11,6 +10,7 @@ import (
 	"github.com/Sur0vy/cows_health.git/internal/errors"
 	"github.com/Sur0vy/cows_health.git/internal/helpers"
 	"github.com/Sur0vy/cows_health.git/internal/logger"
+	"github.com/Sur0vy/cows_health.git/internal/models"
 	"github.com/jmoiron/sqlx"
 )
 

@@ -96,13 +96,17 @@ func (s *FarmStorageDB) Delete(c context.Context, farmID int) error {
 
 	dialect := goqu.Dialect("postgres")
 	SQLStrF, _, _ := dialect.Update("farms").
-		Set(goqu.Record{"deleted": "true"}).
+		Set(
+			goqu.Record{"deleted": "true"},
+		).
 		Where(
 			goqu.C("farm_id").Eq(farmID),
 			goqu.C("deleted").Neq(true),
 		).ToSQL()
 	SQLStrC, _, _ := dialect.Update("cows").
-		Set(goqu.Record{"deleted": "true"}).
+		Set(
+			goqu.Record{"deleted": "true"},
+		).
 		Where(
 			goqu.C("farm_id").Eq(farmID),
 			goqu.C("deleted").Neq(true),

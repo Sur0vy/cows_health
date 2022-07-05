@@ -1,21 +1,22 @@
 package server
 
 import (
-	"github.com/Sur0vy/cows_health.git/internal/handlers/farm"
-	"github.com/Sur0vy/cows_health.git/internal/models"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
-	//"github.com/Sur0vy/cows_health.git/internal/entity/farm"
-	//"github.com/Sur0vy/cows_health.git/internal/entity/user"
-	"github.com/Sur0vy/cows_health.git/internal/handlers/user"
 	"github.com/Sur0vy/cows_health.git/internal/logger"
+	"github.com/Sur0vy/cows_health.git/internal/models"
+	"github.com/Sur0vy/cows_health.git/internal/usecase/cow"
+	"github.com/Sur0vy/cows_health.git/internal/usecase/dataProcessor"
+	"github.com/Sur0vy/cows_health.git/internal/usecase/farm"
+	"github.com/Sur0vy/cows_health.git/internal/usecase/monitoringData"
+	"github.com/Sur0vy/cows_health.git/internal/usecase/user"
 )
 
-func SetupServer(us models.UserStorage, fs models.FarmStorage, log *logger.Logger) *echo.Echo {
-	//fHandler := farm.NewFarmHandler(fs, log)
+func SetupServer(us models.UserStorage, fs models.FarmStorage,
+	ms models.MonitoringDataStorage, cs models.CowStorage, log *logger.Logger) *echo.Echo {
 
 	router := echo.New()
 	router.Use(middleware.Gzip())
@@ -31,16 +32,12 @@ func SetupServer(us models.UserStorage, fs models.FarmStorage, log *logger.Logge
 	farmGrp := api.Group("/farm", AuthMiddleware(us))
 	farm.Init(farmGrp, fs, log)
 
-	//farms.GET("/:id/cows", fHandler.GetCows)
-	//
-	//boluses := api.Group("/boluses", AuthMiddleware(us))
-	//boluses.GET("/types", fHandler.GetBolusesTypes)
-	//boluses.POST("/data", fHandler.AddMonitoringData)
-	//
-	//cows := api.Group("/cows", AuthMiddleware(us))
-	//cows.GET("/breeds", fHandler.GetCowBreeds)
-	//cows.POST("", fHandler.AddCow)
-	//cows.DELETE("", fHandler.DelCows)
-	//cows.GET(":id/info", fHandler.GetCowInfo)
+	cowGrp := api.Group("/cow", AuthMiddleware(us))
+	cow.Init(cowGrp, cs, log)
+
+	dp := dataProcessor.NewDataProcessor(ms, cs, log)
+	mdGrp := api.Group("/data", AuthMiddleware(us))
+	monitoringData.Init(mdGrp, ms, *dp, log)
+
 	return router
 }

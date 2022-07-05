@@ -1,9 +1,10 @@
 package farm
 
 import (
+	"github.com/labstack/echo/v4"
+
 	"github.com/Sur0vy/cows_health.git/internal/logger"
 	"github.com/Sur0vy/cows_health.git/internal/models"
-	"github.com/labstack/echo/v4"
 )
 
 func Init(group *echo.Group, st models.FarmStorage, log *logger.Logger) {
