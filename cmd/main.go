@@ -33,7 +33,7 @@ func main() {
 
 	var err = server.SetupServer(us, fs, ms, cs, log).Start(cnf.ServerHostPort)
 
-	if err == nil {
+	if err != nil {
 		log.Panic().Err(err).Msg(err.Error())
 	}
 }

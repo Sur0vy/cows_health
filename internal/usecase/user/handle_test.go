@@ -116,6 +116,9 @@ func TestHandler_Login(t *testing.T) {
 			body := bytes.NewBuffer([]byte(tt.args.body))
 			recorder := httptest.NewRecorder()
 			req, err := http.NewRequest("POST", "/api/user/login", body)
+			if err != nil {
+				defer req.Body.Close()
+			}
 			router.ServeHTTP(recorder, req)
 			assert.Nil(t, err)
 			assert.Equal(t, tt.want.code, recorder.Code)
@@ -334,9 +337,6 @@ func TestHandler_Register(t *testing.T) {
 			if len(recorder.Result().Cookies()) > 0 && len(tt.want.hash) > 0 {
 				assert.Equal(t, tt.want.hash, recorder.Result().Cookies()[0].Value)
 			}
-
-			//StatusUnauthorized
-			//StatusInternalServerError
 		})
 	}
 }

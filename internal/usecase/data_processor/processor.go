@@ -1,4 +1,4 @@
-package dataProcessor
+package data_processor
 
 import (
 	"context"

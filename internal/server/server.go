@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/Sur0vy/cows_health.git/internal/usecase/data_processor"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -9,9 +10,8 @@ import (
 	"github.com/Sur0vy/cows_health.git/internal/logger"
 	"github.com/Sur0vy/cows_health.git/internal/models"
 	"github.com/Sur0vy/cows_health.git/internal/usecase/cow"
-	"github.com/Sur0vy/cows_health.git/internal/usecase/dataProcessor"
 	"github.com/Sur0vy/cows_health.git/internal/usecase/farm"
-	"github.com/Sur0vy/cows_health.git/internal/usecase/monitoringData"
+	"github.com/Sur0vy/cows_health.git/internal/usecase/monitoring_data"
 	"github.com/Sur0vy/cows_health.git/internal/usecase/user"
 )
 
@@ -35,9 +35,9 @@ func SetupServer(us models.UserStorage, fs models.FarmStorage,
 	cowGrp := api.Group("/cow", AuthMiddleware(us))
 	cow.Init(cowGrp, cs, log)
 
-	dp := dataProcessor.NewDataProcessor(ms, cs, log)
+	dp := data_processor.NewDataProcessor(ms, cs, log)
 	mdGrp := api.Group("/data", AuthMiddleware(us))
-	monitoringData.Init(mdGrp, ms, *dp, log)
+	monitoring_data.Init(mdGrp, ms, *dp, log)
 
 	return router
 }
