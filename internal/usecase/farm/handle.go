@@ -35,7 +35,12 @@ func NewFarmHandler(fs models.FarmStorage, log *logger.Logger) Handle {
 func (h *Handler) Get(c echo.Context) error {
 	cookie, _ := c.Cookie(config.Cookie)
 	h.log.Info().Msgf("Get farms for user: %v", cookie)
-	farms, err := h.farmStorage.Get(c.Request().Context(), c.Get("UserID").(int))
+	uID := c.Get("UserID")
+	if uID == nil {
+		h.log.Warn().Msg("Error reading user from storage")
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	farms, err := h.farmStorage.Get(c.Request().Context(), uID.(int))
 
 	if err != nil {
 		switch err.(type) {
@@ -64,7 +69,12 @@ func (h *Handler) Add(c echo.Context) error {
 		h.log.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
 		return c.NoContent(http.StatusBadRequest)
 	}
-	farm.UserID = c.Get("UserID").(int)
+	uID := c.Get("UserID")
+	if uID == nil {
+		h.log.Warn().Msg("Error reading user from storage")
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	farm.UserID = uID.(int)
 	err = h.farmStorage.Add(c.Request().Context(), farm)
 
 	if err != nil {
