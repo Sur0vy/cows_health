@@ -10,20 +10,13 @@ import (
 	"github.com/Sur0vy/cows_health.git/internal/models"
 )
 
-type dataSlice struct {
-	data        []models.MonitoringData
-	avgPH       float64
-	avgTemp     float64
-	avgMovement float64
-}
-
 type Processor struct {
 	log        *logger.Logger
 	cowStorage models.CowStorage
 	mdStorage  models.MonitoringDataStorage
 }
 
-func NewDataProcessor(ms models.MonitoringDataStorage, cs models.CowStorage, log *logger.Logger) *Processor {
+func NewProcessor(ms models.MonitoringDataStorage, cs models.CowStorage, log *logger.Logger) *Processor {
 	return &Processor{
 		log:        log,
 		cowStorage: cs,
@@ -48,25 +41,25 @@ func (dp *Processor) Run(c context.Context, data models.MonitoringData, wg *sync
 		return
 	}
 	//запросим данные за последние 10 минут
-	mds, err := dp.getHealthData(c, data.CowID)
+	mds, err := dp.GetHealthData(c, data.CowID)
 	if err != nil {
 		return
 	}
 
 	//запустим алгоритмы определения здоровья
-	health := dp.calculateHealth(mds)
+	health := dp.CalculateHealth(mds)
 
 	//сохраним данные
 	dp.saveHealthData(c, health)
 }
 
-func (dp *Processor) getHealthData(c context.Context, cowID int) (dataSlice, error) {
+func (dp *Processor) GetHealthData(c context.Context, cowID int) (models.DataSlice, error) {
 	var (
 		avgPH       float64
 		avgTemp     float64
 		avgMovement float64
 	)
-	var res dataSlice
+	var res models.DataSlice
 	mds, err := dp.mdStorage.Get(c, cowID, 10)
 	if err != nil {
 		dp.log.Info().Msgf("monitoring data get success for %v", cowID)
@@ -74,44 +67,44 @@ func (dp *Processor) getHealthData(c context.Context, cowID int) (dataSlice, err
 	} else {
 		dp.log.Warn().Err(err).Msgf("getting monitoring data error %v", cowID)
 		for i, md := range mds {
-			res.data = append(res.data, md)
+			res.Data = append(res.Data, md)
 			avgPH += md.PH
 			avgTemp += md.Temperature
 			avgMovement += md.Movement
 			dp.log.Info().Msgf("%d = %v", i, md)
 		}
-		res.avgPH = avgPH / float64(len(mds))
-		res.avgTemp = avgTemp / float64(len(mds))
-		res.avgMovement = avgMovement / float64(len(mds))
+		res.AvgPH = avgPH / float64(len(mds))
+		res.AvgTemp = avgTemp / float64(len(mds))
+		res.AvgMovement = avgMovement / float64(len(mds))
 	}
 	return res, nil
 }
 
-func (dp *Processor) calculateHealth(mds dataSlice) models.Health {
+func (dp *Processor) CalculateHealth(mds models.DataSlice) models.Health {
 	//запустим алгоримт определения здоровья и половой активности
 	health := models.Health{
 		Estrus:    false,
 		Ill:       "",
 		UpdatedAt: time.Now(),
 	}
-	for _, md := range mds.data {
-		if (math.Abs(md.Movement-mds.avgMovement)/md.Movement > 0.1) &&
-			(math.Abs(md.Temperature-mds.avgTemp)/md.Temperature > 0.1) {
+	for _, md := range mds.Data {
+		if (math.Abs(md.Movement-mds.AvgMovement)/md.Movement > 0.1) &&
+			(math.Abs(md.Temperature-mds.AvgTemp)/md.Temperature > 0.1) {
 			health.Estrus = true
 			break
 		}
 	}
-	for _, md := range mds.data {
-		if (math.Abs(mds.avgMovement-md.Movement)/md.Movement > 0.2) &&
-			(math.Abs(md.Temperature-mds.avgTemp)/md.Temperature > 0.1) &&
-			(mds.avgPH > 6) {
+	for _, md := range mds.Data {
+		if (math.Abs(mds.AvgMovement-md.Movement)/md.Movement > 0.2) &&
+			(math.Abs(md.Temperature-mds.AvgTemp)/md.Temperature > 0.1) &&
+			(mds.AvgPH > 6) {
 			health.Ill = "Инфекционное заболевание"
 			break
 		}
 	}
 	flag := false
 	if health.Ill == "" {
-		for _, md := range mds.data {
+		for _, md := range mds.Data {
 			if (md.Temperature < 40) || (md.Temperature > 41) ||
 				(md.PH > 5.5) {
 				flag = true

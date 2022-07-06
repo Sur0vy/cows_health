@@ -35,9 +35,9 @@ func SetupServer(us models.UserStorage, fs models.FarmStorage,
 	cowGrp := api.Group("/cow", AuthMiddleware(us))
 	cow.Init(cowGrp, cs, log)
 
-	dp := dataprocessor.NewDataProcessor(ms, cs, log)
+	dp := dataprocessor.NewProcessor(ms, cs, log)
 	mdGrp := api.Group("/data", AuthMiddleware(us))
-	monitoringdata.Init(mdGrp, ms, *dp, log)
+	monitoringdata.Init(mdGrp, ms, dp, log)
 
 	return router
 }

@@ -33,11 +33,7 @@ func (s *MonotoringDataStorageDB) Add(c context.Context, data models.MonitoringD
 
 	SQLStr, _, _ := dialect.
 		Insert("monitoring_data").
-		//Rows(data).
-		//Cols("cow_id", "added_at", "ph", "temperature", "movement", "charge").
-		//Vals().
 		Rows(data).ToSQL()
-	//SQLStr, _, _ := ds.ToSQL()
 
 	_, err := s.db.ExecContext(ctxIn, SQLStr)
 	if err != nil {
