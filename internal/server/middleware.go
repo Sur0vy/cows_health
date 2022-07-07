@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -15,7 +14,7 @@ func AuthMiddleware(s models.UserStorage) echo.MiddlewareFunc {
 		return func(c echo.Context) error {
 			cookie, err := c.Cookie(config.Cookie)
 			if err == nil && cookie.Value != "" {
-				u := s.Get(context.Background(), cookie.Value)
+				u := s.Get(c.Request().Context(), cookie.Value)
 				if u != nil {
 					c.Set("UserID", u.ID)
 					return next(c)

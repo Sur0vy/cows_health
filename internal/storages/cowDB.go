@@ -30,7 +30,7 @@ func (s *CowStorageDB) Add(c context.Context, cow models.Cow) error {
 
 	if cowID != -1 {
 		s.log.Info().Msg("duplicate bolus")
-		return errors.NewExistError()
+		return errors.ErrExist
 	}
 
 	ctxIn, cancel := context.WithTimeout(c, 2*time.Second)
@@ -124,7 +124,7 @@ func (s *CowStorageDB) Get(c context.Context, farmID int) ([]models.Cow, error) 
 	}
 
 	if len(cows) == 0 {
-		return cows, errors.NewEmptyError()
+		return cows, errors.ErrEmpty
 	}
 	return cows, nil
 }

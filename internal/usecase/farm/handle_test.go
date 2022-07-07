@@ -103,7 +103,7 @@ func TestHandler_Add(t *testing.T) {
 				},
 				userID: 1,
 				body:   "{\"name\": \"Farm_1\",\"address\": \"Farm_1_address\"}",
-				err:    errors.NewExistError(),
+				err:    errors.ErrExist,
 			},
 			want: want{
 				code: http.StatusConflict,
@@ -121,7 +121,7 @@ func TestHandler_Add(t *testing.T) {
 				},
 				userID: 1,
 				body:   "{\"name\": \"Farm_1\",\"address\": \"Farm_1_address\"}",
-				err:    errors.NewEmptyError(),
+				err:    errors.ErrEmpty,
 			},
 			want: want{
 				code: http.StatusInternalServerError,
@@ -211,7 +211,7 @@ func TestHandler_Delete(t *testing.T) {
 			args: args{
 				useMocks: true,
 				farmID:   "1",
-				err:      errors.NewEmptyError(),
+				err:      errors.ErrEmpty,
 			},
 			want: want{
 				code: http.StatusConflict,
@@ -222,7 +222,7 @@ func TestHandler_Delete(t *testing.T) {
 			args: args{
 				useMocks: true,
 				farmID:   "1",
-				err:      errors.NewExistError(),
+				err:      errors.ErrExist,
 			},
 			want: want{
 				code: http.StatusInternalServerError,
@@ -331,7 +331,7 @@ func TestHandler_Get(t *testing.T) {
 						Address: "Address_2",
 					},
 				},
-				err: errors.NewEmptyError(),
+				err: errors.ErrEmpty,
 			},
 			want: want{
 				code: http.StatusNoContent,
@@ -356,7 +356,7 @@ func TestHandler_Get(t *testing.T) {
 						UserID:  1,
 					},
 				},
-				err: errors.NewExistError(),
+				err: errors.ErrExist,
 			},
 			want: want{
 				code: http.StatusInternalServerError,

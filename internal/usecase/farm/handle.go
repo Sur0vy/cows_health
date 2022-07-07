@@ -2,6 +2,7 @@ package farm
 
 import (
 	"encoding/json"
+	go_err "errors"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -43,11 +44,10 @@ func (h *Handler) Get(c echo.Context) error {
 	farms, err := h.farmStorage.Get(c.Request().Context(), uID.(int))
 
 	if err != nil {
-		switch err.(type) {
-		case *errors.EmptyError:
+		if go_err.Is(err, errors.ErrEmpty) {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusNoContent)
 			return c.NoContent(http.StatusNoContent)
-		default:
+		} else {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
 			return c.NoContent(http.StatusInternalServerError)
 		}
@@ -78,11 +78,10 @@ func (h *Handler) Add(c echo.Context) error {
 	err = h.farmStorage.Add(c.Request().Context(), farm)
 
 	if err != nil {
-		switch err.(type) {
-		case *errors.ExistError:
+		if go_err.Is(err, errors.ErrExist) {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusConflict)
 			return c.NoContent(http.StatusConflict)
-		default:
+		} else {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
 			return c.NoContent(http.StatusInternalServerError)
 		}
@@ -100,11 +99,10 @@ func (h *Handler) Delete(c echo.Context) error {
 	h.log.Info().Msgf("Delete farm with index: %v", farmID)
 	err = h.farmStorage.Delete(c.Request().Context(), farmID)
 	if err != nil {
-		switch err.(type) {
-		case *errors.EmptyError:
+		if go_err.Is(err, errors.ErrEmpty) {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusConflict)
 			return c.NoContent(http.StatusConflict)
-		default:
+		} else {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
 			return c.NoContent(http.StatusInternalServerError)
 		}

@@ -2,6 +2,7 @@ package cow
 
 import (
 	"encoding/json"
+	go_err "errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -49,15 +50,16 @@ func (h *Handler) Add(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	cow.AddedAt = time.Now()
+	if cow.AddedAt.IsZero() {
+		cow.AddedAt = time.Now()
+	}
 	//добавим в таблицу коров
 	err = h.cs.Add(c.Request().Context(), cow)
 	if err != nil {
-		switch err.(type) {
-		case *errors.ExistError:
+		if go_err.Is(err, errors.ErrExist) {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusConflict)
 			return c.NoContent(http.StatusConflict)
-		default:
+		} else {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
 			return c.NoContent(http.StatusInternalServerError)
 		}
@@ -78,11 +80,10 @@ func (h *Handler) Get(c echo.Context) error {
 	cows, err = h.cs.Get(c.Request().Context(), farmID)
 
 	if err != nil {
-		switch err.(type) {
-		case *errors.EmptyError:
+		if go_err.Is(err, errors.ErrEmpty) {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusNoContent)
 			return c.NoContent(http.StatusNoContent)
-		default:
+		} else {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
 			return c.NoContent(http.StatusInternalServerError)
 		}
@@ -100,11 +101,10 @@ func (h *Handler) Delete(c echo.Context) error {
 	}
 	err = h.cs.Delete(c.Request().Context(), IDs)
 	if err != nil {
-		switch err.(type) {
-		case *errors.EmptyError:
+		if go_err.Is(err, errors.ErrEmpty) {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusConflict)
 			return c.NoContent(http.StatusConflict)
-		default:
+		} else {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
 			return c.NoContent(http.StatusInternalServerError)
 		}
@@ -124,11 +124,10 @@ func (h *Handler) GetInfo(c echo.Context) error {
 	cow, err = h.cs.GetInfo(c.Request().Context(), cowID)
 
 	if err != nil {
-		switch err.(type) {
-		case *errors.EmptyError:
+		if go_err.Is(err, errors.ErrEmpty) {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusNoContent)
 			return c.NoContent(http.StatusNoContent)
-		default:
+		} else {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
 			return c.NoContent(http.StatusInternalServerError)
 		}
@@ -140,11 +139,10 @@ func (h *Handler) GetInfo(c echo.Context) error {
 func (h *Handler) GetBreeds(c echo.Context) error {
 	breeds, err := h.cs.GetBreeds(c.Request().Context())
 	if err != nil {
-		switch err.(type) {
-		case *errors.EmptyError:
+		if go_err.Is(err, errors.ErrEmpty) {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusNoContent)
 			return c.NoContent(http.StatusNoContent)
-		default:
+		} else {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
 			return c.NoContent(http.StatusInternalServerError)
 		}

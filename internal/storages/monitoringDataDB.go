@@ -70,7 +70,7 @@ func (s *MonotoringDataStorageDB) Get(c context.Context, cowID int, interval int
 	}
 
 	if len(res) == 0 {
-		return res, errors.NewEmptyError()
+		return res, errors.ErrEmpty
 	}
 	return res, nil
 }

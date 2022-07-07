@@ -2,6 +2,7 @@ package user
 
 import (
 	"encoding/json"
+	go_err "errors"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -52,11 +53,10 @@ func (h *Handler) Login(c echo.Context) error {
 	var hash string
 	hash, err = h.us.GetHash(c.Request().Context(), user)
 	if err != nil {
-		switch err.(type) {
-		case *errors.EmptyError:
+		if go_err.Is(err, errors.ErrEmpty) {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusUnauthorized)
 			return c.NoContent(http.StatusUnauthorized)
-		default:
+		} else {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
 			return c.NoContent(http.StatusInternalServerError)
 		}
@@ -99,11 +99,10 @@ func (h *Handler) Register(c echo.Context) error {
 	}
 	err = h.us.Add(c.Request().Context(), user)
 	if err != nil {
-		switch err.(type) {
-		case *errors.ExistError:
+		if go_err.Is(err, errors.ErrExist) {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusConflict)
 			return c.NoContent(http.StatusConflict)
-		default:
+		} else {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
 			return c.NoContent(http.StatusInternalServerError)
 		}
@@ -111,11 +110,10 @@ func (h *Handler) Register(c echo.Context) error {
 	var hash string
 	hash, err = h.us.GetHash(c.Request().Context(), user)
 	if err != nil {
-		switch err.(type) {
-		case *errors.EmptyError:
+		if go_err.Is(err, errors.ErrEmpty) {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusUnauthorized)
 			return c.NoContent(http.StatusUnauthorized)
-		default:
+		} else {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
 			return c.NoContent(http.StatusInternalServerError)
 		}

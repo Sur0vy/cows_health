@@ -31,7 +31,7 @@ func (s *UserStorageDB) Add(c context.Context, user models.User) error {
 	u := s.Get(c, userHash)
 	if u != nil {
 		s.log.Warn().Msgf("User %v already exists", user.Login)
-		return errors.NewExistError()
+		return errors.ErrExist
 	}
 
 	passwordHash, err := helpers.GetCryptoPassword(user.Password)
@@ -84,10 +84,10 @@ func (s *UserStorageDB) GetHash(c context.Context, user models.User) (string, er
 	u := s.Get(c, userHash)
 	if u == nil {
 		s.log.Warn().Msgf("User %v not exists", user.Login)
-		return "", errors.NewEmptyError()
+		return "", errors.ErrEmpty
 	}
 	if helpers.CheckPassword(u.Password, user.Password) {
 		return userHash, nil
 	}
-	return "", errors.NewEmptyError()
+	return "", errors.ErrEmpty
 }

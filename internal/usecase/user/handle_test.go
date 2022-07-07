@@ -44,7 +44,7 @@ func TestHandler_Login(t *testing.T) {
 				},
 				body: "{\"login\":\"User\",\"password\":\"pa$$word_1\"}",
 				hash: "8f9bfe9d1345237cb3b2b205864da075",
-				err:  errors.NewExistError(),
+				err:  errors.ErrExist,
 			},
 			want: want{
 				code: http.StatusInternalServerError,
@@ -61,7 +61,7 @@ func TestHandler_Login(t *testing.T) {
 				},
 				body: "{\"login\":\"User\",\"password\":\"pa$$word_1\"}",
 				hash: "8f9bfe9d1345237cb3b2b205864da075",
-				err:  errors.NewEmptyError(),
+				err:  errors.ErrEmpty,
 			},
 			want: want{
 				code: http.StatusUnauthorized,
@@ -247,7 +247,7 @@ func TestHandler_Register(t *testing.T) {
 				body:  "{\"login\":\"User\",\"password\":\"pa$$word_1\"}",
 				hash:  "8f9bfe9d1345237cb3b2b205864da075",
 				errGH: nil,
-				errA:  errors.NewExistError(),
+				errA:  errors.ErrExist,
 			},
 			want: want{
 				code: http.StatusConflict,
@@ -266,7 +266,7 @@ func TestHandler_Register(t *testing.T) {
 				body:  "{\"login\":\"User\",\"password\":\"pa$$word_1\"}",
 				hash:  "8f9bfe9d1345237cb3b2b205864da075",
 				errGH: nil,
-				errA:  errors.NewEmptyError(),
+				errA:  errors.ErrEmpty,
 			},
 			want: want{
 				code: http.StatusInternalServerError,
@@ -284,7 +284,7 @@ func TestHandler_Register(t *testing.T) {
 				},
 				body:  "{\"login\":\"User\",\"password\":\"pa$$word_1\"}",
 				hash:  "8f9bfe9d1345237cb3b2b205864da075",
-				errGH: errors.NewEmptyError(),
+				errGH: errors.ErrEmpty,
 				errA:  nil,
 			},
 			want: want{
@@ -303,7 +303,7 @@ func TestHandler_Register(t *testing.T) {
 				},
 				body:  "{\"login\":\"User\",\"password\":\"pa$$word_1\"}",
 				hash:  "8f9bfe9d1345237cb3b2b205864da075",
-				errGH: errors.NewExistError(),
+				errGH: errors.ErrExist,
 				errA:  nil,
 			},
 			want: want{
