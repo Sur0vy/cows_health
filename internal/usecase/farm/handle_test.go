@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/Sur0vy/cows_health.git/internal/errors"
+	"github.com/Sur0vy/cows_health.git/errors"
+	"github.com/Sur0vy/cows_health.git/logger"
+	"github.com/Sur0vy/cows_health.git/mocks"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -15,8 +17,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Sur0vy/cows_health.git/internal/logger"
-	storageMock "github.com/Sur0vy/cows_health.git/internal/mocks"
 	"github.com/Sur0vy/cows_health.git/internal/models"
 )
 

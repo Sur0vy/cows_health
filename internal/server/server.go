@@ -1,12 +1,12 @@
 package server
 
 import (
+	"github.com/Sur0vy/cows_health.git/logger"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
-	"github.com/Sur0vy/cows_health.git/internal/logger"
 	"github.com/Sur0vy/cows_health.git/internal/models"
 	"github.com/Sur0vy/cows_health.git/internal/usecase/cow"
 	"github.com/Sur0vy/cows_health.git/internal/usecase/dataprocessor"

@@ -2,11 +2,11 @@ package dataprocessor
 
 import (
 	"context"
+	"github.com/Sur0vy/cows_health.git/logger"
 	"math"
 	"sync"
 	"time"
 
-	"github.com/Sur0vy/cows_health.git/internal/logger"
 	"github.com/Sur0vy/cows_health.git/internal/models"
 )
 

@@ -3,6 +3,8 @@ package cow
 import (
 	"encoding/json"
 	go_err "errors"
+	"github.com/Sur0vy/cows_health.git/errors"
+	"github.com/Sur0vy/cows_health.git/logger"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -11,8 +13,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/Sur0vy/cows_health.git/internal/errors"
-	"github.com/Sur0vy/cows_health.git/internal/logger"
 	"github.com/Sur0vy/cows_health.git/internal/models"
 )
 

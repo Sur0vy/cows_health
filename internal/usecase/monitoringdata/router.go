@@ -1,8 +1,8 @@
 package monitoringdata
 
 import (
-	"github.com/Sur0vy/cows_health.git/internal/logger"
 	"github.com/Sur0vy/cows_health.git/internal/models"
+	"github.com/Sur0vy/cows_health.git/logger"
 	"github.com/labstack/echo/v4"
 )
 

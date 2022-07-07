@@ -2,12 +2,12 @@ package monitoringdata
 
 import (
 	"encoding/json"
+	"github.com/Sur0vy/cows_health.git/logger"
 	"github.com/labstack/echo/v4"
 	"io/ioutil"
 	"net/http"
 	"sync"
 
-	"github.com/Sur0vy/cows_health.git/internal/logger"
 	"github.com/Sur0vy/cows_health.git/internal/models"
 )
 

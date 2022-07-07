@@ -1,4 +1,8 @@
-package main
+package migrations
+
+// TODO сделать схему миграции
+// https://github.com/pressly/goose
+// https://github.com/golang-migrate/migrate
 
 var DBSchema = `
 CREATE TABLE IF NOT EXISTS users (

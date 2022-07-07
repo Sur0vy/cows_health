@@ -1,11 +1,11 @@
 package server
 
 import (
+	"github.com/Sur0vy/cows_health.git/config"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/Sur0vy/cows_health.git/internal/config"
 	"github.com/Sur0vy/cows_health.git/internal/models"
 )
 

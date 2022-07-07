@@ -3,15 +3,15 @@ package user
 import (
 	"encoding/json"
 	go_err "errors"
+	"github.com/Sur0vy/cows_health.git/config"
+	"github.com/Sur0vy/cows_health.git/errors"
+	"github.com/Sur0vy/cows_health.git/logger"
 	"io/ioutil"
 	"net/http"
 	"time"
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/Sur0vy/cows_health.git/internal/config"
-	"github.com/Sur0vy/cows_health.git/internal/errors"
-	"github.com/Sur0vy/cows_health.git/internal/logger"
 	"github.com/Sur0vy/cows_health.git/internal/models"
 )
 
