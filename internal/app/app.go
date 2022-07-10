@@ -39,12 +39,9 @@ func Run(cnf *config.Config, log *logger.Logger) {
 	log.Info().Msg("Creating database")
 	createTables(db)
 
-	us := storages.NewUserDB(db, log)
-	fs := storages.NewFarmDB(db, log)
-	ms := storages.NewMonitoringDataDB(db, log)
-	cs := storages.NewCowDB(db, log)
+	repo := storages.NewStorageDB(db, log)
 
-	var err = server.SetupServer(us, fs, ms, cs, log).Start(cnf.ServerHostPort)
+	var err = server.SetupServer(*repo, log).Start(cnf.ServerHostPort)
 
 	if err != nil {
 		log.Panic().Err(err).Msg(err.Error())

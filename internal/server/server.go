@@ -15,8 +15,7 @@ import (
 	"github.com/Sur0vy/cows_health.git/logger"
 )
 
-func SetupServer(us storages.UserStorage, fs storages.FarmStorage,
-	ms storages.MonitoringDataStorage, cs storages.CowStorage, log *logger.Logger) *echo.Echo {
+func SetupServer(s storages.StorageDB, log *logger.Logger) *echo.Echo {
 
 	router := echo.New()
 	router.Use(middleware.Gzip())
@@ -27,17 +26,17 @@ func SetupServer(us storages.UserStorage, fs storages.FarmStorage,
 	})
 	api := router.Group("/api")
 	userGrp := api.Group("/user")
-	user.Init(userGrp, us, log)
+	user.Init(userGrp, s.Us, log)
 
-	farmGrp := api.Group("/farm", AuthMiddleware(us))
-	farm.Init(farmGrp, fs, log)
+	farmGrp := api.Group("/farm", AuthMiddleware(s.Us))
+	farm.Init(farmGrp, s.Fs, log)
 
-	cowGrp := api.Group("/cow", AuthMiddleware(us))
-	cow.Init(cowGrp, cs, log)
+	cowGrp := api.Group("/cow", AuthMiddleware(s.Us))
+	cow.Init(cowGrp, s.Cs, log)
 
-	dp := dataprocessor.NewProcessor(ms, cs, log)
-	mdGrp := api.Group("/data", AuthMiddleware(us))
-	monitoringdata.Init(mdGrp, ms, dp, log)
+	dp := dataprocessor.NewProcessor(s.Ms, s.Cs, log)
+	mdGrp := api.Group("/data", AuthMiddleware(s.Us))
+	monitoringdata.Init(mdGrp, s.Ms, dp, log)
 
 	return router
 }
