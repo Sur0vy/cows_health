@@ -1,10 +1,10 @@
 package models
 
 import (
-	"context"
 	"time"
 )
 
+//TODO напрашивается вынести в другой файл с созданием отдельного стораджа
 type Breed struct {
 	ID   int    `json:"breed_id" db:"breed_id"`
 	Name string `json:"breed" db:"name"`
@@ -32,14 +32,4 @@ type CowInfo struct {
 	Health  Health           `json:"health"`
 	Summary Cow              `json:"summary"`
 	History []MonitoringData `json:"history"`
-}
-
-type CowStorage interface {
-	Add(c context.Context, cow Cow) error
-	Get(c context.Context, farmID int) ([]Cow, error)
-	Delete(c context.Context, CowIDs []int) error
-	GetInfo(c context.Context, farmID int) (CowInfo, error)
-	GetBreeds(c context.Context) ([]Breed, error)
-	UpdateHealth(c context.Context, data Health) error
-	HasBolus(c context.Context, BolusNum int) int
 }

@@ -2,15 +2,15 @@ package storages
 
 import (
 	"context"
-	"github.com/Sur0vy/cows_health.git/errors"
-	"github.com/Sur0vy/cows_health.git/logger"
 	"regexp"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/jmoiron/sqlx"
 
+	"github.com/Sur0vy/cows_health.git/errors"
 	"github.com/Sur0vy/cows_health.git/internal/models"
+	"github.com/Sur0vy/cows_health.git/logger"
 )
 
 type CowStorageDB struct {

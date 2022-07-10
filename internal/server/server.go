@@ -1,22 +1,22 @@
 package server
 
 import (
-	"github.com/Sur0vy/cows_health.git/logger"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
-	"github.com/Sur0vy/cows_health.git/internal/models"
+	"github.com/Sur0vy/cows_health.git/internal/storages"
 	"github.com/Sur0vy/cows_health.git/internal/usecase/cow"
 	"github.com/Sur0vy/cows_health.git/internal/usecase/dataprocessor"
 	"github.com/Sur0vy/cows_health.git/internal/usecase/farm"
 	"github.com/Sur0vy/cows_health.git/internal/usecase/monitoringdata"
 	"github.com/Sur0vy/cows_health.git/internal/usecase/user"
+	"github.com/Sur0vy/cows_health.git/logger"
 )
 
-func SetupServer(us models.UserStorage, fs models.FarmStorage,
-	ms models.MonitoringDataStorage, cs models.CowStorage, log *logger.Logger) *echo.Echo {
+func SetupServer(us storages.UserStorage, fs storages.FarmStorage,
+	ms storages.MonitoringDataStorage, cs storages.CowStorage, log *logger.Logger) *echo.Echo {
 
 	router := echo.New()
 	router.Use(middleware.Gzip())

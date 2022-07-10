@@ -1,12 +1,13 @@
 package cow
 
 import (
-	"github.com/Sur0vy/cows_health.git/internal/models"
-	"github.com/Sur0vy/cows_health.git/logger"
 	"github.com/labstack/echo/v4"
+
+	"github.com/Sur0vy/cows_health.git/internal/storages"
+	"github.com/Sur0vy/cows_health.git/logger"
 )
 
-func Init(group *echo.Group, ct models.CowStorage, log *logger.Logger) {
+func Init(group *echo.Group, ct storages.CowStorage, log *logger.Logger) {
 	cHandler := NewCowHandler(ct, log)
 
 	group.POST("", cHandler.Add)

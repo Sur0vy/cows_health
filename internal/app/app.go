@@ -2,16 +2,16 @@ package app
 
 import (
 	"context"
-	"github.com/Sur0vy/cows_health.git/config"
-	"github.com/Sur0vy/cows_health.git/logger"
-	"github.com/Sur0vy/cows_health.git/migrations"
 	"time"
 
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jmoiron/sqlx"
 
+	"github.com/Sur0vy/cows_health.git/config"
 	"github.com/Sur0vy/cows_health.git/internal/server"
 	"github.com/Sur0vy/cows_health.git/internal/storages"
+	"github.com/Sur0vy/cows_health.git/logger"
+	"github.com/Sur0vy/cows_health.git/migrations"
 )
 
 func connectToDB(DSN string) *sqlx.DB {

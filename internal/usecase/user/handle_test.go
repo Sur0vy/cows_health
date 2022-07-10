@@ -3,9 +3,6 @@ package user
 import (
 	"bytes"
 	"context"
-	"github.com/Sur0vy/cows_health.git/errors"
-	"github.com/Sur0vy/cows_health.git/logger"
-	"github.com/Sur0vy/cows_health.git/mocks"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -14,7 +11,10 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/Sur0vy/cows_health.git/errors"
 	"github.com/Sur0vy/cows_health.git/internal/models"
+	"github.com/Sur0vy/cows_health.git/logger"
+	"github.com/Sur0vy/cows_health.git/mocks"
 )
 
 func TestHandler_Login(t *testing.T) {
@@ -117,6 +117,7 @@ func TestHandler_Login(t *testing.T) {
 			body := bytes.NewBuffer([]byte(tt.args.body))
 			recorder := httptest.NewRecorder()
 			req, err := http.NewRequest("POST", "/api/user/login", body)
+			req.Header.Set("Content-Type", "application/json")
 			if err != nil {
 				defer func(Body io.ReadCloser) {
 					err := Body.Close()
@@ -169,8 +170,7 @@ func TestHandler_Logout(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			recorder := httptest.NewRecorder()
-			body := bytes.NewBuffer([]byte(tt.args.body))
-			req, err := http.NewRequest("POST", "/api/user/logout", body)
+			req, err := http.NewRequest("POST", "/api/user/logout", nil)
 			router.ServeHTTP(recorder, req)
 			assert.Nil(t, err)
 			assert.Equal(t, tt.want.code, recorder.Code)
@@ -334,6 +334,7 @@ func TestHandler_Register(t *testing.T) {
 			body := bytes.NewBuffer([]byte(tt.args.body))
 			recorder := httptest.NewRecorder()
 			req, err := http.NewRequest("POST", "/api/user/register", body)
+			req.Header.Set("Content-Type", "application/json")
 			router.ServeHTTP(recorder, req)
 			assert.Nil(t, err)
 			assert.Equal(t, tt.want.code, recorder.Code)

@@ -3,8 +3,6 @@ package cow
 import (
 	"encoding/json"
 	go_err "errors"
-	"github.com/Sur0vy/cows_health.git/errors"
-	"github.com/Sur0vy/cows_health.git/logger"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -13,7 +11,10 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	"github.com/Sur0vy/cows_health.git/errors"
 	"github.com/Sur0vy/cows_health.git/internal/models"
+	"github.com/Sur0vy/cows_health.git/internal/storages"
+	"github.com/Sur0vy/cows_health.git/logger"
 )
 
 type Handle interface {
@@ -26,10 +27,10 @@ type Handle interface {
 
 type Handler struct {
 	log *logger.Logger
-	cs  models.CowStorage
+	cs  storages.CowStorage
 }
 
-func NewCowHandler(cs models.CowStorage, log *logger.Logger) Handle {
+func NewCowHandler(cs storages.CowStorage, log *logger.Logger) Handle {
 	return &Handler{
 		log: log,
 		cs:  cs,
@@ -37,15 +38,8 @@ func NewCowHandler(cs models.CowStorage, log *logger.Logger) Handle {
 }
 
 func (h *Handler) Add(c echo.Context) error {
-	defer c.Request().Body.Close()
-	input, err := ioutil.ReadAll(c.Request().Body)
-	if err != nil {
-		h.log.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
-		return c.NoContent(http.StatusBadRequest)
-	}
-
-	var cow models.Cow
-	if err := json.Unmarshal(input, &cow); err != nil {
+	cow := new(models.Cow)
+	if err := c.Bind(cow); err != nil {
 		h.log.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
 		return c.NoContent(http.StatusBadRequest)
 	}
@@ -54,7 +48,7 @@ func (h *Handler) Add(c echo.Context) error {
 		cow.AddedAt = time.Now()
 	}
 	//добавим в таблицу коров
-	err = h.cs.Add(c.Request().Context(), cow)
+	err := h.cs.Add(c.Request().Context(), *cow)
 	if err != nil {
 		if go_err.Is(err, errors.ErrExist) {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusConflict)
@@ -93,7 +87,6 @@ func (h *Handler) Get(c echo.Context) error {
 }
 
 func (h *Handler) Delete(c echo.Context) error {
-	defer c.Request().Body.Close()
 	IDs, err := getIDFromJSON(c.Request().Body)
 	if err != nil {
 		h.log.Warn().Msgf("Error with code: %v", http.StatusBadRequest)

@@ -4,9 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/Sur0vy/cows_health.git/errors"
-	"github.com/Sur0vy/cows_health.git/logger"
-	"github.com/Sur0vy/cows_health.git/mocks"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -17,7 +14,10 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/Sur0vy/cows_health.git/errors"
 	"github.com/Sur0vy/cows_health.git/internal/models"
+	"github.com/Sur0vy/cows_health.git/logger"
+	"github.com/Sur0vy/cows_health.git/mocks"
 )
 
 func TestHandler_Add(t *testing.T) {
@@ -154,15 +154,7 @@ func TestHandler_Add(t *testing.T) {
 			body := bytes.NewBuffer([]byte(tt.args.body))
 			recorder := httptest.NewRecorder()
 			req, err := http.NewRequest("POST", "/api/farm", body)
-			if err != nil {
-				defer func(Body io.ReadCloser) {
-					err := Body.Close()
-					if err != nil {
-						panic(err)
-					}
-				}(req.Body)
-			}
-
+			req.Header.Set("Content-Type", "application/json")
 			router.ServeHTTP(recorder, req)
 			assert.Nil(t, err)
 			assert.Equal(t, tt.want.code, recorder.Code)
@@ -247,15 +239,6 @@ func TestHandler_Delete(t *testing.T) {
 			recorder := httptest.NewRecorder()
 			path := fmt.Sprintf("/api/farm/%s", tt.args.farmID)
 			req, err := http.NewRequest("DELETE", path, nil)
-			if err != nil {
-				defer func(Body io.ReadCloser) {
-					err := Body.Close()
-					if err != nil {
-						panic(err)
-					}
-				}(req.Body)
-			}
-
 			router.ServeHTTP(recorder, req)
 			assert.Nil(t, err)
 			assert.Equal(t, tt.want.code, recorder.Code)

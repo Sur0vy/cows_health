@@ -1,18 +1,17 @@
 package farm
 
 import (
-	"encoding/json"
 	go_err "errors"
-	"github.com/Sur0vy/cows_health.git/config"
-	"github.com/Sur0vy/cows_health.git/errors"
-	"github.com/Sur0vy/cows_health.git/logger"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
 
+	"github.com/Sur0vy/cows_health.git/config"
+	"github.com/Sur0vy/cows_health.git/errors"
 	"github.com/Sur0vy/cows_health.git/internal/models"
+	"github.com/Sur0vy/cows_health.git/internal/storages"
+	"github.com/Sur0vy/cows_health.git/logger"
 )
 
 type Handle interface {
@@ -23,10 +22,10 @@ type Handle interface {
 
 type Handler struct {
 	log         *logger.Logger
-	farmStorage models.FarmStorage
+	farmStorage storages.FarmStorage
 }
 
-func NewFarmHandler(fs models.FarmStorage, log *logger.Logger) Handle {
+func NewFarmHandler(fs storages.FarmStorage, log *logger.Logger) Handle {
 	return &Handler{
 		log:         log,
 		farmStorage: fs,
@@ -57,25 +56,19 @@ func (h *Handler) Get(c echo.Context) error {
 }
 
 func (h *Handler) Add(c echo.Context) error {
-	defer c.Request().Body.Close()
-	input, err := ioutil.ReadAll(c.Request().Body)
-	if err != nil {
+	farm := new(models.Farm)
+	if err := c.Bind(farm); err != nil {
 		h.log.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	var farm models.Farm
-	if err := json.Unmarshal(input, &farm); err != nil {
-		h.log.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
-		return c.NoContent(http.StatusBadRequest)
-	}
 	uID := c.Get("UserID")
 	if uID == nil {
 		h.log.Warn().Msg("Error reading user from storage")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	farm.UserID = uID.(int)
-	err = h.farmStorage.Add(c.Request().Context(), farm)
+	err := h.farmStorage.Add(c.Request().Context(), *farm)
 
 	if err != nil {
 		if go_err.Is(err, errors.ErrExist) {

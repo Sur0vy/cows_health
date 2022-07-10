@@ -1,18 +1,17 @@
 package user
 
 import (
-	"encoding/json"
 	go_err "errors"
-	"github.com/Sur0vy/cows_health.git/config"
-	"github.com/Sur0vy/cows_health.git/errors"
-	"github.com/Sur0vy/cows_health.git/logger"
-	"io/ioutil"
 	"net/http"
 	"time"
 
 	"github.com/labstack/echo/v4"
 
+	"github.com/Sur0vy/cows_health.git/config"
+	"github.com/Sur0vy/cows_health.git/errors"
 	"github.com/Sur0vy/cows_health.git/internal/models"
+	"github.com/Sur0vy/cows_health.git/internal/storages"
+	"github.com/Sur0vy/cows_health.git/logger"
 )
 
 type Handle interface {
@@ -23,10 +22,10 @@ type Handle interface {
 
 type Handler struct {
 	log *logger.Logger
-	us  models.UserStorage
+	us  storages.UserStorage
 }
 
-func NewUserHandler(us models.UserStorage, log *logger.Logger) Handle {
+func NewUserHandler(us storages.UserStorage, log *logger.Logger) Handle {
 	return &Handler{
 		log: log,
 		us:  us,
@@ -36,22 +35,14 @@ func NewUserHandler(us models.UserStorage, log *logger.Logger) Handle {
 func (h *Handler) Login(c echo.Context) error {
 	h.log.Info().Msgf("Handler IN: %v", c)
 	defer h.log.Info().Msgf("Handler OUT: %v", c)
-	body, err := ioutil.ReadAll(c.Request().Body)
-	if err != nil {
-		h.log.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
-		return c.NoContent(http.StatusBadRequest)
-	}
-	defer c.Request().Body.Close()
-	h.log.Info().Msg(string(body))
-	var user models.User
-	err = json.Unmarshal(body, &user)
-	if err != nil {
+
+	user := new(models.User)
+	if err := c.Bind(user); err != nil {
 		h.log.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	var hash string
-	hash, err = h.us.GetHash(c.Request().Context(), user)
+	hash, err := h.us.GetHash(c.Request().Context(), *user)
 	if err != nil {
 		if go_err.Is(err, errors.ErrEmpty) {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusUnauthorized)
@@ -86,18 +77,14 @@ func (h *Handler) Logout(c echo.Context) error {
 
 func (h *Handler) Register(c echo.Context) error {
 	defer c.Request().Body.Close()
-	body, err := ioutil.ReadAll(c.Request().Body)
-	if err != nil {
-		h.log.Warn().Msgf("Register failed. Bad request.")
+
+	user := new(models.User)
+	if err := c.Bind(user); err != nil {
+		h.log.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
 		return c.NoContent(http.StatusBadRequest)
 	}
-	var user models.User
-	err = json.Unmarshal(body, &user)
-	if (err != nil) || (user.Login == "") || (user.Password == "") {
-		h.log.Warn().Msgf("Register failed. Bad request.")
-		return c.NoContent(http.StatusBadRequest)
-	}
-	err = h.us.Add(c.Request().Context(), user)
+
+	err := h.us.Add(c.Request().Context(), *user)
 	if err != nil {
 		if go_err.Is(err, errors.ErrExist) {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusConflict)
@@ -108,7 +95,7 @@ func (h *Handler) Register(c echo.Context) error {
 		}
 	}
 	var hash string
-	hash, err = h.us.GetHash(c.Request().Context(), user)
+	hash, err = h.us.GetHash(c.Request().Context(), *user)
 	if err != nil {
 		if go_err.Is(err, errors.ErrEmpty) {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusUnauthorized)

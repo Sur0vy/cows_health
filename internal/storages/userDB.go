@@ -2,16 +2,16 @@ package storages
 
 import (
 	"context"
-	"github.com/Sur0vy/cows_health.git/errors"
-	"github.com/Sur0vy/cows_health.git/helpers"
-	"github.com/Sur0vy/cows_health.git/logger"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
-
-	"github.com/Sur0vy/cows_health.git/internal/models"
 	"github.com/jmoiron/sqlx"
+
+	"github.com/Sur0vy/cows_health.git/errors"
+	"github.com/Sur0vy/cows_health.git/helpers"
+	"github.com/Sur0vy/cows_health.git/internal/models"
+	"github.com/Sur0vy/cows_health.git/logger"
 )
 
 type UserStorageDB struct {

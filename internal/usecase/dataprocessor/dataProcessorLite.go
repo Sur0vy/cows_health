@@ -2,29 +2,30 @@ package dataprocessor
 
 import (
 	"context"
-	"github.com/Sur0vy/cows_health.git/logger"
 	"math"
 	"sync"
 	"time"
 
 	"github.com/Sur0vy/cows_health.git/internal/models"
+	"github.com/Sur0vy/cows_health.git/internal/storages"
+	"github.com/Sur0vy/cows_health.git/logger"
 )
 
-type Processor struct {
+type DataProcessorLite struct {
 	log        *logger.Logger
-	cowStorage models.CowStorage
-	mdStorage  models.MonitoringDataStorage
+	cowStorage storages.CowStorage
+	mdStorage  storages.MonitoringDataStorage
 }
 
-func NewProcessor(ms models.MonitoringDataStorage, cs models.CowStorage, log *logger.Logger) *Processor {
-	return &Processor{
+func NewProcessor(ms storages.MonitoringDataStorage, cs storages.CowStorage, log *logger.Logger) *DataProcessorLite {
+	return &DataProcessorLite{
 		log:        log,
 		cowStorage: cs,
 		mdStorage:  ms,
 	}
 }
 
-func (dp *Processor) Run(c context.Context, data models.MonitoringData, wg *sync.WaitGroup) {
+func (dp *DataProcessorLite) Run(c context.Context, data models.MonitoringData, wg *sync.WaitGroup) {
 	defer wg.Done()
 	//запросим, есть ли болюс
 	cowID := dp.cowStorage.HasBolus(c, data.BolusNum)
@@ -53,13 +54,13 @@ func (dp *Processor) Run(c context.Context, data models.MonitoringData, wg *sync
 	dp.saveHealthData(c, health)
 }
 
-func (dp *Processor) GetHealthData(c context.Context, cowID int) (models.DataSlice, error) {
+func (dp *DataProcessorLite) GetHealthData(c context.Context, cowID int) (models.MonitoringDataFull, error) {
 	var (
 		avgPH       float64
 		avgTemp     float64
 		avgMovement float64
 	)
-	var res models.DataSlice
+	var res models.MonitoringDataFull
 	mds, err := dp.mdStorage.Get(c, cowID, 10)
 	if err != nil {
 		dp.log.Info().Msgf("monitoring data get success for %v", cowID)
@@ -80,7 +81,7 @@ func (dp *Processor) GetHealthData(c context.Context, cowID int) (models.DataSli
 	return res, nil
 }
 
-func (dp *Processor) CalculateHealth(mds models.DataSlice) models.Health {
+func (dp *DataProcessorLite) CalculateHealth(mds models.MonitoringDataFull) models.Health {
 	//запустим алгоримт определения здоровья и половой активности
 	health := models.Health{
 		Estrus:    false,
@@ -118,7 +119,7 @@ func (dp *Processor) CalculateHealth(mds models.DataSlice) models.Health {
 	return health
 }
 
-func (dp *Processor) Save(c context.Context, data models.MonitoringData) error {
+func (dp *DataProcessorLite) Save(c context.Context, data models.MonitoringData) error {
 	var err error
 	if err = dp.mdStorage.Add(c, data); err == nil {
 		dp.log.Info().Msgf("monitoring data added success for %v", data.CowID)
@@ -128,7 +129,7 @@ func (dp *Processor) Save(c context.Context, data models.MonitoringData) error {
 	return err
 }
 
-func (dp *Processor) saveHealthData(c context.Context, health models.Health) {
+func (dp *DataProcessorLite) saveHealthData(c context.Context, health models.Health) {
 	if err := dp.cowStorage.UpdateHealth(c, health); err == nil {
 		dp.log.Info().Msgf("health data added success for %v", health.CowID)
 	} else {
