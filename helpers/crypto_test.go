@@ -50,8 +50,8 @@ func Test_getCryptoPassword(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    bool
 		wantErr bool
+		wrong   bool
 	}{
 		{
 			name: "right",
@@ -59,7 +59,8 @@ func Test_getCryptoPassword(t *testing.T) {
 				password:   "pa$$word_1",
 				passwordCh: "pa$$word_1",
 			},
-			want: true,
+			wantErr: false,
+			wrong:   false,
 		},
 		{
 			name: "wrong",
@@ -67,7 +68,8 @@ func Test_getCryptoPassword(t *testing.T) {
 				password:   "pa$$word",
 				passwordCh: "pa$$word_1",
 			},
-			want: false,
+			wantErr: false,
+			wrong:   true,
 		},
 	}
 	for _, tt := range tests {
@@ -75,9 +77,11 @@ func Test_getCryptoPassword(t *testing.T) {
 			hash, err := GetCryptoPassword(tt.args.password)
 			if !tt.wantErr {
 				res := CheckPassword(hash, tt.args.passwordCh)
-				assert.Equal(t, res, tt.want)
+				assert.NotEqual(t, res, tt.wrong)
 				require.NoError(t, err)
 				return
+			} else {
+				assert.NotNil(t, err)
 			}
 		})
 	}
