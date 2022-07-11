@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"testing"
 
 	"github.com/labstack/echo/v4"
@@ -23,7 +22,6 @@ func TestHandler_Add(t *testing.T) {
 		data     []models.MonitoringData
 		badBody  string
 		err      error
-		wg       sync.WaitGroup
 	}
 	type want struct {
 		code int
