@@ -17,7 +17,7 @@ import (
 	"github.com/Sur0vy/cows_health.git/errors"
 	"github.com/Sur0vy/cows_health.git/internal/models"
 	"github.com/Sur0vy/cows_health.git/logger"
-	"github.com/Sur0vy/cows_health.git/mocks"
+	storageMock "github.com/Sur0vy/cows_health.git/mocks"
 )
 
 func TestHandler_Add(t *testing.T) {
