@@ -14,5 +14,6 @@ func Init(group *echo.Group, ct storages.CowStorage, log *logger.Logger) {
 	group.DELETE("", cHandler.Delete)
 	group.GET("/:id", cHandler.Get)
 	group.GET("/breeds", cHandler.GetBreeds)
+	group.POST("/breed", cHandler.AddBreed)
 	group.GET("/info/:id", cHandler.GetInfo)
 }

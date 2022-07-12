@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	goErros "errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"bou.ke/monkey"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 
@@ -23,11 +25,9 @@ import (
 )
 
 func TestHandler_Add(t *testing.T) {
-	const dateFormat = "2006-01-02"
 	type args struct {
 		useMocks bool
 		cow      models.Cow
-		dt       string
 		badBody  string
 		err      error
 	}
@@ -49,7 +49,6 @@ func TestHandler_Add(t *testing.T) {
 					FarmID:   1,
 					BolusNum: 1,
 				},
-				dt:  "2022-02-01",
 				err: nil,
 			},
 			want: want{
@@ -66,7 +65,6 @@ func TestHandler_Add(t *testing.T) {
 					FarmID:   1,
 					BolusNum: 1,
 				},
-				dt:  "2022-02-01",
 				err: errors.ErrExist,
 			},
 			want: want{
@@ -83,7 +81,6 @@ func TestHandler_Add(t *testing.T) {
 					FarmID:   1,
 					BolusNum: 1,
 				},
-				dt:  "2022-02-01",
 				err: errors.ErrEmpty,
 			},
 			want: want{
@@ -101,7 +98,6 @@ func TestHandler_Add(t *testing.T) {
 					BolusNum: 1,
 				},
 				badBody: "bad body",
-				dt:      "2022-02-01",
 				err:     nil,
 			},
 			want: want{
@@ -116,12 +112,16 @@ func TestHandler_Add(t *testing.T) {
 	router := echo.New()
 	router.POST("/api/cow", ch.Add)
 
+	monkey.Patch(time.Now, func() time.Time {
+		return time.Date(2009, 11, 17, 20, 34, 58, 651387237, time.UTC)
+	})
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var body []byte
 			if tt.args.useMocks {
-				tt.args.cow.DateOfBorn, _ = time.Parse(dateFormat, tt.args.dt)
-				tt.args.cow.AddedAt, _ = time.Parse(dateFormat, tt.args.dt)
+				tt.args.cow.DateOfBorn = time.Now()
+				tt.args.cow.AddedAt = time.Now()
 				repo.On("Add", context.Background(), tt.args.cow).
 					Return(tt.args.err).
 					Once()
@@ -427,7 +427,7 @@ func TestHandler_GetBreeds(t *testing.T) {
 
 	ch := NewCowHandler(repo, logger.New())
 	router := echo.New()
-	router.GET("/api/cow", ch.GetBreeds)
+	router.GET("/api/cow/breeds", ch.GetBreeds)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -436,7 +436,7 @@ func TestHandler_GetBreeds(t *testing.T) {
 				Once()
 
 			recorder := httptest.NewRecorder()
-			req, err := http.NewRequest("GET", "/api/cow", nil)
+			req, err := http.NewRequest("GET", "/api/cow/breeds", nil)
 			router.ServeHTTP(recorder, req)
 			assert.Nil(t, err)
 			assert.Equal(t, tt.want.code, recorder.Code)
@@ -630,6 +630,84 @@ func Test_getIDFromJSON(t *testing.T) {
 				assert.Nil(t, err)
 				assert.Equal(t, tt.want.arr, out)
 			}
+		})
+	}
+}
+
+func TestHandler_AddBreed(t *testing.T) {
+	type args struct {
+		useMocks bool
+		breed    models.Breed
+		badBody  string
+		err      error
+	}
+	type want struct {
+		code int
+	}
+	tests := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "success",
+			args: args{
+				useMocks: true,
+				breed: models.Breed{
+					Name: "Русская",
+				},
+				err: nil,
+			},
+			want: want{
+				code: http.StatusCreated,
+			},
+		},
+		{
+			name: "bad body",
+			args: args{
+				useMocks: false,
+				badBody:  "bad",
+				err:      nil,
+			},
+			want: want{
+				code: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "unexpected error",
+			args: args{
+				useMocks: true,
+				err:      goErros.New("error"),
+			},
+			want: want{
+				code: http.StatusInternalServerError,
+			},
+		},
+	}
+
+	repo := &storageMock.CowStorage{}
+
+	ch := NewCowHandler(repo, logger.New())
+	router := echo.New()
+	router.POST("/api/cow/breeds", ch.AddBreed)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var body []byte
+			if tt.args.useMocks {
+				repo.On("AddBreed", context.Background(), tt.args.breed).
+					Return(tt.args.err).
+					Once()
+				body, _ = json.Marshal(tt.args.breed)
+			} else {
+				body = []byte(tt.args.badBody)
+			}
+			recorder := httptest.NewRecorder()
+			req, err := http.NewRequest("POST", "/api/cow/breeds", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			router.ServeHTTP(recorder, req)
+			assert.Nil(t, err)
+			assert.Equal(t, tt.want.code, recorder.Code)
 		})
 	}
 }

@@ -12,6 +12,7 @@ type CowStorage interface {
 	Delete(c context.Context, CowIDs []int) error
 	GetInfo(c context.Context, farmID int) (models.CowInfo, error)
 	GetBreeds(c context.Context) ([]models.Breed, error)
+	AddBreed(c context.Context, breed models.Breed) error
 	UpdateHealth(c context.Context, data models.Health) error
 	HasBolus(c context.Context, BolusNum int) int
 }

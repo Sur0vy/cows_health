@@ -22,6 +22,7 @@ type Handle interface {
 	Get(c echo.Context) error
 	Delete(c echo.Context) error
 	GetBreeds(c echo.Context) error
+	AddBreed(c echo.Context) error
 	GetInfo(c echo.Context) error
 }
 
@@ -142,6 +143,21 @@ func (h *Handler) GetBreeds(c echo.Context) error {
 	}
 	h.log.Info().Msg("Breeds getting success")
 	return c.JSON(http.StatusOK, breeds)
+}
+
+func (h *Handler) AddBreed(c echo.Context) error {
+	breed := new(models.Breed)
+	if err := c.Bind(breed); err != nil {
+		h.log.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
+		return c.NoContent(http.StatusBadRequest)
+	}
+	err := h.cs.AddBreed(c.Request().Context(), *breed)
+	if err != nil {
+		h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	h.log.Info().Msg("Breed added success")
+	return c.NoContent(http.StatusCreated)
 }
 
 func getIDFromJSON(reader io.ReadCloser) ([]int, error) {

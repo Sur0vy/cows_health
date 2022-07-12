@@ -6,7 +6,7 @@ import (
 
 //TODO напрашивается вынести в другой файл с созданием отдельного стораджа
 type Breed struct {
-	ID   int    `json:"breed_id" db:"breed_id"`
+	ID   int    `json:"breed_id,omitempty" db:"breed_id"`
 	Name string `json:"breed" db:"name"`
 }
 

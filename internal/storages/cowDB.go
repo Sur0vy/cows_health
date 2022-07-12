@@ -104,6 +104,26 @@ func (s *CowStorageDB) GetBreeds(c context.Context) ([]models.Breed, error) {
 	return breeds, nil
 }
 
+func (s *CowStorageDB) AddBreed(c context.Context, breed models.Breed) error {
+	ctxIn, cancel := context.WithTimeout(c, time.Second)
+	defer cancel()
+
+	dialect := goqu.Dialect("postgres")
+	SQLStr, _, _ := dialect.
+		Insert("breeds").
+		Cols("name").
+		Vals(
+			goqu.Vals{breed.Name}).
+		ToSQL()
+
+	_, err := s.db.ExecContext(ctxIn, SQLStr)
+	if err != nil {
+		s.log.Info().Msg("inserting breed error")
+		return err
+	}
+	return nil
+}
+
 func (s *CowStorageDB) Get(c context.Context, farmID int) ([]models.Cow, error) {
 	ctxIn, cancel := context.WithTimeout(c, 5*time.Second)
 	defer cancel()

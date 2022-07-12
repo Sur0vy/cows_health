@@ -28,6 +28,20 @@ func (_m *CowStorage) Add(c context.Context, cow models.Cow) error {
 	return r0
 }
 
+// AddBreed provides a mock function with given fields: c, breed
+func (_m *CowStorage) AddBreed(c context.Context, breed models.Breed) error {
+	ret := _m.Called(c, breed)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, models.Breed) error); ok {
+		r0 = rf(c, breed)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // Delete provides a mock function with given fields: c, CowIDs
 func (_m *CowStorage) Delete(c context.Context, CowIDs []int) error {
 	ret := _m.Called(c, CowIDs)
