@@ -6,12 +6,12 @@ import (
 
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
-
-	"github.com/Sur0vy/cows_health.git/internal/errors"
-	"github.com/Sur0vy/cows_health.git/internal/helpers"
-	"github.com/Sur0vy/cows_health.git/internal/logger"
-	"github.com/Sur0vy/cows_health.git/internal/models"
 	"github.com/jmoiron/sqlx"
+
+	"github.com/Sur0vy/cows_health.git/errors"
+	"github.com/Sur0vy/cows_health.git/helpers"
+	"github.com/Sur0vy/cows_health.git/internal/models"
+	"github.com/Sur0vy/cows_health.git/logger"
 )
 
 type UserStorageDB struct {
@@ -31,7 +31,7 @@ func (s *UserStorageDB) Add(c context.Context, user models.User) error {
 	u := s.Get(c, userHash)
 	if u != nil {
 		s.log.Warn().Msgf("User %v already exists", user.Login)
-		return errors.NewExistError()
+		return errors.ErrExist
 	}
 
 	passwordHash, err := helpers.GetCryptoPassword(user.Password)
@@ -84,10 +84,10 @@ func (s *UserStorageDB) GetHash(c context.Context, user models.User) (string, er
 	u := s.Get(c, userHash)
 	if u == nil {
 		s.log.Warn().Msgf("User %v not exists", user.Login)
-		return "", errors.NewEmptyError()
+		return "", errors.ErrEmpty
 	}
 	if helpers.CheckPassword(u.Password, user.Password) {
 		return userHash, nil
 	}
-	return "", errors.NewEmptyError()
+	return "", errors.ErrEmpty
 }

@@ -1,7 +1,6 @@
 package models
 
 import (
-	"context"
 	"time"
 )
 
@@ -16,7 +15,9 @@ type MonitoringData struct {
 	Charge      float64   `json:"charge" db:"charge"`
 }
 
-type MonitoringDataStorage interface {
-	Add(c context.Context, data MonitoringData) error
-	Get(c context.Context, cowID int, interval int) ([]MonitoringData, error)
+type MonitoringDataFull struct {
+	Data        []MonitoringData
+	AvgPH       float64
+	AvgTemp     float64
+	AvgMovement float64
 }

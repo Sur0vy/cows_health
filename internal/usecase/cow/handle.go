@@ -2,6 +2,7 @@ package cow
 
 import (
 	"encoding/json"
+	go_err "errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -10,9 +11,10 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/Sur0vy/cows_health.git/internal/errors"
-	"github.com/Sur0vy/cows_health.git/internal/logger"
+	"github.com/Sur0vy/cows_health.git/errors"
 	"github.com/Sur0vy/cows_health.git/internal/models"
+	"github.com/Sur0vy/cows_health.git/internal/storages"
+	"github.com/Sur0vy/cows_health.git/logger"
 )
 
 type Handle interface {
@@ -20,15 +22,16 @@ type Handle interface {
 	Get(c echo.Context) error
 	Delete(c echo.Context) error
 	GetBreeds(c echo.Context) error
+	AddBreed(c echo.Context) error
 	GetInfo(c echo.Context) error
 }
 
 type Handler struct {
 	log *logger.Logger
-	cs  models.CowStorage
+	cs  storages.CowStorage
 }
 
-func NewCowHandler(cs models.CowStorage, log *logger.Logger) Handle {
+func NewCowHandler(cs storages.CowStorage, log *logger.Logger) Handle {
 	return &Handler{
 		log: log,
 		cs:  cs,
@@ -36,28 +39,22 @@ func NewCowHandler(cs models.CowStorage, log *logger.Logger) Handle {
 }
 
 func (h *Handler) Add(c echo.Context) error {
-	defer c.Request().Body.Close()
-	input, err := ioutil.ReadAll(c.Request().Body)
-	if err != nil {
+	cow := new(models.Cow)
+	if err := c.Bind(cow); err != nil {
 		h.log.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	var cow models.Cow
-	if err := json.Unmarshal(input, &cow); err != nil {
-		h.log.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
-		return c.NoContent(http.StatusBadRequest)
+	if cow.AddedAt.IsZero() {
+		cow.AddedAt = time.Now()
 	}
-
-	cow.AddedAt = time.Now()
 	//добавим в таблицу коров
-	err = h.cs.Add(c.Request().Context(), cow)
+	err := h.cs.Add(c.Request().Context(), *cow)
 	if err != nil {
-		switch err.(type) {
-		case *errors.ExistError:
+		if go_err.Is(err, errors.ErrExist) {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusConflict)
 			return c.NoContent(http.StatusConflict)
-		default:
+		} else {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
 			return c.NoContent(http.StatusInternalServerError)
 		}
@@ -78,11 +75,10 @@ func (h *Handler) Get(c echo.Context) error {
 	cows, err = h.cs.Get(c.Request().Context(), farmID)
 
 	if err != nil {
-		switch err.(type) {
-		case *errors.EmptyError:
+		if go_err.Is(err, errors.ErrEmpty) {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusNoContent)
 			return c.NoContent(http.StatusNoContent)
-		default:
+		} else {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
 			return c.NoContent(http.StatusInternalServerError)
 		}
@@ -92,7 +88,6 @@ func (h *Handler) Get(c echo.Context) error {
 }
 
 func (h *Handler) Delete(c echo.Context) error {
-	defer c.Request().Body.Close()
 	IDs, err := getIDFromJSON(c.Request().Body)
 	if err != nil {
 		h.log.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
@@ -100,11 +95,10 @@ func (h *Handler) Delete(c echo.Context) error {
 	}
 	err = h.cs.Delete(c.Request().Context(), IDs)
 	if err != nil {
-		switch err.(type) {
-		case *errors.EmptyError:
+		if go_err.Is(err, errors.ErrEmpty) {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusConflict)
 			return c.NoContent(http.StatusConflict)
-		default:
+		} else {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
 			return c.NoContent(http.StatusInternalServerError)
 		}
@@ -124,11 +118,10 @@ func (h *Handler) GetInfo(c echo.Context) error {
 	cow, err = h.cs.GetInfo(c.Request().Context(), cowID)
 
 	if err != nil {
-		switch err.(type) {
-		case *errors.EmptyError:
+		if go_err.Is(err, errors.ErrEmpty) {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusNoContent)
 			return c.NoContent(http.StatusNoContent)
-		default:
+		} else {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
 			return c.NoContent(http.StatusInternalServerError)
 		}
@@ -140,17 +133,31 @@ func (h *Handler) GetInfo(c echo.Context) error {
 func (h *Handler) GetBreeds(c echo.Context) error {
 	breeds, err := h.cs.GetBreeds(c.Request().Context())
 	if err != nil {
-		switch err.(type) {
-		case *errors.EmptyError:
+		if go_err.Is(err, errors.ErrEmpty) {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusNoContent)
 			return c.NoContent(http.StatusNoContent)
-		default:
+		} else {
 			h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
 			return c.NoContent(http.StatusInternalServerError)
 		}
 	}
 	h.log.Info().Msg("Breeds getting success")
 	return c.JSON(http.StatusOK, breeds)
+}
+
+func (h *Handler) AddBreed(c echo.Context) error {
+	breed := new(models.Breed)
+	if err := c.Bind(breed); err != nil {
+		h.log.Warn().Msgf("Error with code: %v", http.StatusBadRequest)
+		return c.NoContent(http.StatusBadRequest)
+	}
+	err := h.cs.AddBreed(c.Request().Context(), *breed)
+	if err != nil {
+		h.log.Warn().Msgf("Error with code: %v", http.StatusInternalServerError)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	h.log.Info().Msg("Breed added success")
+	return c.NoContent(http.StatusCreated)
 }
 
 func getIDFromJSON(reader io.ReadCloser) ([]int, error) {

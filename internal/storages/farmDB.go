@@ -8,9 +8,9 @@ import (
 	"github.com/doug-martin/goqu/v9"
 	"github.com/jmoiron/sqlx"
 
-	"github.com/Sur0vy/cows_health.git/internal/errors"
-	"github.com/Sur0vy/cows_health.git/internal/logger"
+	"github.com/Sur0vy/cows_health.git/errors"
 	"github.com/Sur0vy/cows_health.git/internal/models"
+	"github.com/Sur0vy/cows_health.git/logger"
 )
 
 type FarmStorageDB struct {
@@ -46,7 +46,7 @@ func (s *FarmStorageDB) Get(c context.Context, userID int) ([]models.Farm, error
 	}
 
 	if len(farms) == 0 {
-		return farms, errors.NewEmptyError()
+		return farms, errors.ErrEmpty
 	}
 	return farms, nil
 }
@@ -67,7 +67,7 @@ func (s *FarmStorageDB) Add(c context.Context, farm models.Farm) error {
 
 	if err == nil {
 		s.log.Info().Msg("farm already exist")
-		return errors.NewExistError()
+		return errors.ErrExist
 	} else if err != sql.ErrNoRows {
 		s.log.Warn().Err(err).Msg("db request error")
 		return err

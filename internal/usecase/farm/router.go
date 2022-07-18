@@ -3,11 +3,11 @@ package farm
 import (
 	"github.com/labstack/echo/v4"
 
-	"github.com/Sur0vy/cows_health.git/internal/logger"
-	"github.com/Sur0vy/cows_health.git/internal/models"
+	"github.com/Sur0vy/cows_health.git/internal/storages"
+	"github.com/Sur0vy/cows_health.git/logger"
 )
 
-func Init(group *echo.Group, st models.FarmStorage, log *logger.Logger) {
+func Init(group *echo.Group, st storages.FarmStorage, log *logger.Logger) {
 	fHandler := NewFarmHandler(st, log)
 
 	group.GET("", fHandler.Get)

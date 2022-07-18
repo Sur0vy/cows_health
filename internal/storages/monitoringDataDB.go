@@ -8,9 +8,9 @@ import (
 	"github.com/doug-martin/goqu/v9"
 	"github.com/jmoiron/sqlx"
 
-	"github.com/Sur0vy/cows_health.git/internal/errors"
-	"github.com/Sur0vy/cows_health.git/internal/logger"
+	"github.com/Sur0vy/cows_health.git/errors"
 	"github.com/Sur0vy/cows_health.git/internal/models"
+	"github.com/Sur0vy/cows_health.git/logger"
 )
 
 type MonotoringDataStorageDB struct {
@@ -33,11 +33,7 @@ func (s *MonotoringDataStorageDB) Add(c context.Context, data models.MonitoringD
 
 	SQLStr, _, _ := dialect.
 		Insert("monitoring_data").
-		//Rows(data).
-		//Cols("cow_id", "added_at", "ph", "temperature", "movement", "charge").
-		//Vals().
 		Rows(data).ToSQL()
-	//SQLStr, _, _ := ds.ToSQL()
 
 	_, err := s.db.ExecContext(ctxIn, SQLStr)
 	if err != nil {
@@ -74,7 +70,7 @@ func (s *MonotoringDataStorageDB) Get(c context.Context, cowID int, interval int
 	}
 
 	if len(res) == 0 {
-		return res, errors.NewEmptyError()
+		return res, errors.ErrEmpty
 	}
 	return res, nil
 }
